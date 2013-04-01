@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <style name="sty_button" parent="android:Widget.Button">
+        <item name="android:layout_marginBottom">10dip</item>
+        <item name="android:textSize">20dp</item>
+    </style>
+</resources>

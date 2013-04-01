@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name = "resulttype">
+        <item>@string/AveragePower</item>
+        <item>@string/DetailPower</item>
+		<item>@string/ShowPowerFigure</item>        
+		<item>@string/ShowEventFigure</item>        		
+        <item>@string/uploadlabel</item>
+        <item>@string/deletelabel</item>        
+    </array>
+    <array name = "apppoweropt">
+        <item>Compare Power</item>
+    </array>
+</resources>

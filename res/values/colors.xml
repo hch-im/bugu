@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <resources>
+        <color name="table_background">#F5F0F2</color>
+        <color name="text_background">#099E1D</color>        
+        <color name="indianred">#B0171F</color>
+	
+	<color name="crimson">#DC143C</color>
+	<color name="lightpink">#8B5F65</color>
+	<color name="palevioletred">#8B475D</color>
+	<color name="violetred">#FF3E96</color>
+	<color name="magenta">#EE00EE</color>
+    </resources>

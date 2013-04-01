@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bugu</string>
+    <string name="btn_exit">Exit</string>
+    <string name="startButton">Start Monitor</string>
+	<string name="stopButton">Stop Monitor</string>    
+	<string name="cleanButton">Clean Cache</string>
+	<string name="resultTypeOption">Operations</string>	
+	<string name="AveragePower">Show Average Power</string>
+	<string name="DetailPower">Show Detailed Power</string>	
+	<string name="ShowPowerFigure">Show Power Figure</string>
+	<string name="ShowEventFigure">Show Event Figure</string>		
+	<string name="tableLabel">Table</string>
+	<string name="figureLabel">Figure</string>
+	<string name="uploadlabel">Upload Data</string>
+	<string name="deletelabel">Delete This Record</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:gravity="center_vertical|center_horizontal"
+    android:orientation="vertical"
+    android:padding="10dip" >
+
+    <Button
+        android:id="@+id/startButton"
+        style="@style/sty_button"
+        android:layout_width="224dp"
+        android:layout_height="wrap_content"
+        android:text="@string/startButton" />
+
+    <Button
+        android:id="@+id/exitButton"
+        style="@style/sty_button"
+        android:layout_width="224dp"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_exit"
+        />
+
+</LinearLayout>
