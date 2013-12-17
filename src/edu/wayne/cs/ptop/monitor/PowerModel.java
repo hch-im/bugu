@@ -54,7 +54,6 @@ public class PowerModel {
 	{
         //each Uid may includes multiple process
         if (processStats.size() > 0) {
-        	int i = 0;
             for (Map.Entry<String, ? extends BatteryStats.Uid.Proc> ent
                     : processStats.entrySet()) {
  //           	Log.i("pTopA: ", (i++) + " CPU Power -- " + ent.getKey());
@@ -137,7 +136,7 @@ public class PowerModel {
 	
 	public void appNetworkPower(long received, long sent, long wifiRunTime, double wifiPowerPerKB)
 	{
-//	    log("APP--- " + appPowerInfo.name + "Received: " + received + " sent: " + sent+ " wifiRunTime: " + wifiRunTime + " wifiPowerPerKB:" + wifiPowerPerKB);
+	    Log.i("PowerModel",  appPowerInfo.name + "Received: " + received + " sent: " + sent+ " wifiRunTime: " + wifiRunTime + " wifiPowerPerKB:" + wifiPowerPerKB);
 		appPowerInfo.tcpBytesSent = sent;
 		appPowerInfo.tcpBytesReceived = received;
 		appPowerInfo.dataTransRecvPower = (received + sent) * wifiPowerPerKB / 1024; 
@@ -329,14 +328,5 @@ while ((line = reader.readLine()) != null)
             wr.write("BASEPOWER: BluetoothAtCmd " + powerProfile.getAveragePower(PowerProfile.POWER_BLUETOOTH_AT_CMD) * voltage + "\r\n");
         }catch(Exception ex)
         {}
-    }
-    
-    private void log(String info)
-    {
-        try{            
-            wr.write("LOG: " + info + "\r\n");
-        }catch(Exception ex){
-            ex.printStackTrace();
-        }        
-    }    
+    } 
 }
