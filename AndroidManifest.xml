@@ -37,7 +37,7 @@
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name" >
         <!--service android:enabled="true" android:exported="true" android:name="PtopaService"></service-->
-		<activity android:name=".display.PtopaTabWidget" android:label="@string/app_name"
+		<activity android:name="edu.wayne.cs.bugu.display.PtopaTabWidget" android:label="@string/app_name"
           android:theme="@android:style/Theme.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -45,26 +45,26 @@
             </intent-filter>        
         </activity>  
         <activity
-            android:name=".display.PtopaActivity"
+            android:name="edu.wayne.cs.bugu.display.PtopaActivity"
             android:label="@string/app_name" >
         </activity>
         <activity
-            android:name=".display.AppPowerActivity"
+            android:name="edu.wayne.cs.bugu.display.AppPowerActivity"
             android:label="@string/app_name" >
         </activity>        
         <activity
-            android:name=".display.RecordActivity"
+            android:name="edu.wayne.cs.bugu.display.RecordActivity"
             android:label="@string/app_name" >
         </activity>             
         <activity
-            android:name=".display.SetupActivity"
+            android:name="edu.wayne.cs.bugu.display.SetupActivity"
             android:label="@string/app_name" >
         </activity>
-        <activity android:name=".display.ResultActivity" android:label="@string/app_name"></activity>
-        <activity android:label="@string/app_name" android:name=".display.AvgPowerActivity"></activity>
-        <activity android:label="@string/app_name" android:name=".display.PFigureResultActivity"></activity>
-        <activity android:label="@string/app_name" android:name=".display.EFigureResultActivity"></activity>
-        <activity android:name=".display.ComparePowerActivity" android:label="@string/app_name"></activity>                   
+        <activity android:name="edu.wayne.cs.bugu.display.ResultActivity" android:label="@string/app_name"></activity>
+        <activity android:label="@string/app_name" android:name="edu.wayne.cs.bugu.display.AvgPowerActivity"></activity>
+        <activity android:label="@string/app_name" android:name="edu.wayne.cs.bugu.display.PFigureResultActivity"></activity>
+        <activity android:label="@string/app_name" android:name="edu.wayne.cs.bugu.display.EFigureResultActivity"></activity>
+        <activity android:name="edu.wayne.cs.bugu.display.ComparePowerActivity" android:label="@string/app_name"></activity>                   
     </application>
 
 </manifest>
