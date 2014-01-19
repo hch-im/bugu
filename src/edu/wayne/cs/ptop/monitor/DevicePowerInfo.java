@@ -25,6 +25,9 @@ public class DevicePowerInfo {
 	double idleTime = 0;
 	double bluetoothOnTime = 0;
     double dspOnTime = 0;
+    double cpuTime = 0;
+    double foregroundTime = 0;
+    double speedStepTime = 0;
     
 	public void writePower(FileWriter io)throws IOException
 	{

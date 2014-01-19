@@ -28,6 +28,7 @@ public class AppPowerInfo {
     double bytesWrite = 0;        
     double audioOnTime = 0;
     double videoOnTime = 0;
+    double speedStepTime = 0;
     
     public double totalPower()
     {

@@ -13,6 +13,8 @@ import android.util.SparseArray;
 
 import com.android.internal.os.BatteryStatsImpl;
 import com.android.internal.os.PowerProfile;
+import com.android.internal.os.ProcessStats;
+import com.android.internal.os.ProcessStats.Stats;
 
 
 public class PowerModel {
@@ -49,7 +51,8 @@ public class PowerModel {
 	{
 	    this.devicePowerInfo = devPowerInfo;
 	}
-	
+
+
 	public void appCPUPower(Map<String, ? extends BatteryStats.Uid.Proc> processStats)
 	{
         //each Uid may includes multiple process
@@ -64,33 +67,62 @@ public class PowerModel {
         
         appPowerInfo.cpuPower /= 1000;	
         devicePowerInfo.cpuPower += appPowerInfo.cpuPower;
+        devicePowerInfo.cpuTime += appPowerInfo.cpuTime;
+        devicePowerInfo.foregroundTime += appPowerInfo.foregroundTime; 
+        devicePowerInfo.speedStepTime += appPowerInfo.speedStepTime;
 	}
-	
+
     private void processCPUPower(Uid.Proc ps)
     {
         long userTime = ps.getUserTime(statsType); // in 1/100 sec
         long systemTime = ps.getSystemTime(statsType);// in 1/100 sec
+        
         appPowerInfo.foregroundTime += ps.getForegroundTime(statsType) / 1000; // microseconds to milliseconds
         appPowerInfo.cpuTime += (userTime + systemTime) * 10; // convert to millis
         int totalTimeAtSpeeds = 0;
+        double processPower = 0;        
         // Get the total time
         for (int step = 0; step < speedSteps; step++) {
             cpuSpeedStepTimes[step] = ps.getTimeAtCpuSpeedStep(step, statsType);//microseconds
             totalTimeAtSpeeds += cpuSpeedStepTimes[step];
+            processPower = cpuSpeedStepTimes[step] * speedStepAvgPower[step];
         }
 
-        // Then compute the ratio of time spent at each speed
-        if(totalTimeAtSpeeds > 0)
-        {
-            for (int step = 0; step < speedSteps; step++) {
-                double ratio = (double) cpuSpeedStepTimes[step] * 1.0 / totalTimeAtSpeeds;
-                appPowerInfo.cpuPower += ratio * appPowerInfo.cpuTime * speedStepAvgPower[step]; // milli joule * 1000
-            }
-        }
-        
-//        log("APP--- " + appPowerInfo.name + " userTime: " + userTime*10 + " systemTime: " + systemTime*10 + " foregroundTime: " + appPowerInfo.foregroundTime + " timeatspeeds: " + totalTimeAtSpeeds);
+//        // Then compute the ratio of time spent at each speed
+//        if(totalTimeAtSpeeds > 0)
+//        {
+//            for (int step = 0; step < speedSteps; step++) {
+//                double ratio = (double) cpuSpeedStepTimes[step] * 1.0 / totalTimeAtSpeeds;
+//                appPowerInfo.cpuPower += ratio * appPowerInfo.cpuTime * speedStepAvgPower[step]; // milli joule * 1000
+//            }
+//        }
+        appPowerInfo.cpuPower += processPower;
+        appPowerInfo.speedStepTime += totalTimeAtSpeeds;
     }
+
+	public void newAppCPUPower(SparseArray<? extends Uid.Pid> pidStats, ProcessStats stats)
+	{
+        if (pidStats.size() > 0) {
+        	int pid;
+        	Stats st;
+            for (int j=0; j<pidStats.size(); j++) {
+            	pid = pidStats.keyAt(j);
+            	st = getStatsOfPid(pid, stats);
+            	newProcessCPUPower(st);
+            }
+        }		
+        
+        appPowerInfo.cpuPower /= 1000;	
+        devicePowerInfo.cpuPower += appPowerInfo.cpuPower;
+	}
     
+	private void newProcessCPUPower(Stats st){
+        long userTime = st.base_utime; // in jiffies
+        long systemTime = st.base_stime;// in jiffies
+        appPowerInfo.foregroundTime += st.base_uptime;
+        appPowerInfo.cpuTime += (userTime + systemTime);
+	}
+	
 	public void appIOPower(SparseArray<? extends Uid.Pid> pidStats)
 	{
 //		Log.i("pTopA: ", "Pid amount -- " + pidStats.size());
@@ -98,7 +130,7 @@ public class PowerModel {
         if (pidStats.size() > 0) {
             for (int j=0; j<pidStats.size(); j++) {
                 try{
-//                	Log.i("pTopA: ", "entry key -- " + pidStats.keyAt(j));
+                	Log.i("pTopA: ", "entry key -- " + pidStats.keyAt(j));
                 	processIOPower(readProcessIOInfo(Integer.valueOf(pidStats.keyAt(j))));
                 }catch(Exception ex){}
             }
@@ -329,4 +361,18 @@ while ((line = reader.readLine()) != null)
         }catch(Exception ex)
         {}
     } 
+    
+    private Stats getStatsOfPid(int pid, ProcessStats processStats){
+    	int n = processStats.countStats();
+    	Stats st = null;
+    	for(int i = 0; i < n; i++){
+    		st = processStats.getStats(i);
+    		if(st.pid == pid)
+    		{
+    			return st;
+    		}
+    	}
+    	
+    	return st;
+    }    
 }

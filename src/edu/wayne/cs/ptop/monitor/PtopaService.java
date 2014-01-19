@@ -26,6 +26,8 @@ import java.util.Iterator;
 
 import com.android.internal.os.BatteryStatsImpl;
 import com.android.internal.os.PowerProfile;
+import com.android.internal.os.ProcessStats;
+import com.android.internal.os.ProcessStats.Stats;
 import com.android.internal.app.IBatteryStats;
 
 import edu.wayne.cs.ptop.db.ConfigDAO;
@@ -78,6 +80,7 @@ public class PtopaService extends Service{
     private ConfigDAO cdao = new ConfigDAO();
     private long wifiTotalData = 0;
     private double wifiAvgPower = 0;
+    private ProcessStats processStats;
     
     public boolean currentState()
     {
@@ -92,6 +95,7 @@ public class PtopaService extends Service{
         devicePower.clear();
         powerHandler.postDelayed(powerPeriodicTask, period);   
         state = true;
+        processStats = new ProcessStats(false);
     }
     
     public void stopMonitor()
@@ -139,7 +143,8 @@ public class PtopaService extends Service{
 		//load new battery stats
 	    loadStatsData();
 		long realTime = SystemClock.elapsedRealtime();
-        long uSecTime = batteryStats.computeBatteryRealtime(realTime * 1000, statsType);   		
+        long uSecTime = batteryStats.computeBatteryRealtime(realTime * 1000, statsType);  
+        
 		curAppPower = new HashMap<Integer, AppPowerInfo>();
 		curDevicePower = new DevicePowerInfo();
 		powerModel.setDevicePowerInfo(curDevicePower);
@@ -154,6 +159,12 @@ public class PtopaService extends Service{
            //remove old  data
            appPower.subList(999, appPower.size()).clear();
         }
+        
+        Log.i("Bugu", "battaryStats: cpu time: " + curDevicePower.cpuTime + " foreground: " + curDevicePower.foregroundTime + " speedStep: " + curDevicePower.speedStepTime);
+        long[] tms = processStats.getLastCpuSpeedTimes();
+        long ttms = 0;
+        for(int i = 0; i < tms.length; i++) ttms += tms[i];
+        Log.i("Bugu", "processStats: cpu time: " + (processStats.getLastSystemTime() + processStats.getLastUserTime()) + " idleTime: " + processStats.getLastIdleTime() + " speedStep: " + ttms);
 	}
 	
     private void estimateAppPower(long uSecTime) {
@@ -167,10 +178,13 @@ public class PtopaService extends Service{
             Uid u = uidStats.valueAt(iu);
             AppPowerInfo appInfo = new AppPowerInfo();
             appInfo.id = u.getUid();
+            
             curAppPower.put(u.getUid(), appInfo);
             powerModel.setAppPowerInfo(appInfo);
             //estimate power
             powerModel.appCPUPower(u.getProcessStats());
+//            SparseArray<? extends Uid.Pid> pidStats = u.getPidStats();
+//            powerModel.newAppCPUPower(pidStats, processStats);
             powerModel.appWakelockPower(u.getWakelockStats(), uSecTime);
             //did not distinguish 3G and wifi
             powerModel.appNetworkPower(u.getTcpBytesReceived(statsType), 
@@ -229,6 +243,8 @@ public class PtopaService extends Service{
             batteryStats.distributeWorkLocked(statsType);
         } catch (RemoteException e) {}
    
+        //update process cpu usage
+        processStats.update();        
     }
     
 //    private double getMobileAverageDataCost(long uSecTime) {
