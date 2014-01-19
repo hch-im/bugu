@@ -18,7 +18,7 @@ import edu.wayne.cs.bugu.db.RecordDAO;
 import edu.wayne.cs.bugu.db.model.Record;
 import edu.wayne.cs.bugu.rest.BuguService;
 import edu.wayne.cs.bugu.rest.BuguServiceImpl;
-import edu.wayne.cs.ptop.R;
+import edu.wayne.cs.bugu.R;
 import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;

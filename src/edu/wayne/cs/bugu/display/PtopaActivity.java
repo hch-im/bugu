@@ -30,7 +30,7 @@ import edu.wayne.cs.bugu.db.model.Record;
 import edu.wayne.cs.bugu.monitor.Event;
 import edu.wayne.cs.bugu.monitor.PtopaReceiver;
 import edu.wayne.cs.bugu.monitor.PtopaService;
-import edu.wayne.cs.ptop.R;
+import edu.wayne.cs.bugu.R;
 
 import android.app.Activity;
 import android.content.IntentFilter;

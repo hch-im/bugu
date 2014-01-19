@@ -5,7 +5,7 @@
  * should not be modified by hand.
  */
 
-package edu.wayne.cs.ptop;
+package edu.wayne.cs.bugu;
 
 public final class R {
     public static final class array {

@@ -8,7 +8,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 
 import edu.wayne.cs.bugu.analyzer.PowerAnalyzer;
-import edu.wayne.cs.ptop.R;
+import edu.wayne.cs.bugu.R;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Environment;

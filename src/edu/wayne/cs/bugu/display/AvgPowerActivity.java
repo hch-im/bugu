@@ -12,7 +12,7 @@ import java.util.Map;
 
 import edu.wayne.cs.bugu.analyzer.PowerAnalyzer;
 import edu.wayne.cs.bugu.db.model.Record;
-import edu.wayne.cs.ptop.R;
+import edu.wayne.cs.bugu.R;
 import android.app.AlertDialog;
 import android.app.LauncherActivity;
 import android.content.DialogInterface;

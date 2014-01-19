@@ -25,7 +25,7 @@ import com.androidplot.xy.XYStepMode;
 import com.androidplot.xy.YLayoutStyle;
 
 import edu.wayne.cs.bugu.analyzer.EventAnalyzer;
-import edu.wayne.cs.ptop.R;
+import edu.wayne.cs.bugu.R;
 import android.app.Activity;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;

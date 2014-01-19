@@ -7,7 +7,7 @@ import org.json.JSONObject;
 
 import edu.wayne.cs.bugu.rest.BuguService;
 import edu.wayne.cs.bugu.rest.BuguServiceImpl;
-import edu.wayne.cs.ptop.R;
+import edu.wayne.cs.bugu.R;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;

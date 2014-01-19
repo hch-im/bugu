@@ -1,6 +1,6 @@
 package edu.wayne.cs.bugu.display;
 
-import edu.wayne.cs.ptop.R;
+import edu.wayne.cs.bugu.R;
 import android.app.Activity;
 import android.os.Bundle;
 
