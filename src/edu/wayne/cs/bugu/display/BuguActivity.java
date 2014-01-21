@@ -29,7 +29,7 @@ import edu.wayne.cs.bugu.db.SqliteHelper;
 import edu.wayne.cs.bugu.db.model.Record;
 import edu.wayne.cs.bugu.monitor.Event;
 import edu.wayne.cs.bugu.monitor.PtopaReceiver;
-import edu.wayne.cs.bugu.monitor.PtopaService;
+import edu.wayne.cs.bugu.monitor.PowerProfilingService;
 import edu.wayne.cs.bugu.R;
 
 import android.app.Activity;
@@ -42,9 +42,9 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 
-public class PtopaActivity extends Activity implements OnClickListener{
+public class BuguActivity extends Activity implements OnClickListener{
     private int period=10000;
-	private PtopaService ptopaService = new PtopaService();
+	private PowerProfilingService ptopaService = null;
     private PtopaReceiver receiver = null;
     private Handler eventHandler = new Handler();
     private boolean state = false;
@@ -67,7 +67,7 @@ public class PtopaActivity extends Activity implements OnClickListener{
         setContentView(R.layout.home);
         initViewListeners();
         try{
-        	ptopaService.setMainActivity(this);
+        	ptopaService = new PowerProfilingService(this);
         }catch(Exception ex)
         {
         	//TODO change service states

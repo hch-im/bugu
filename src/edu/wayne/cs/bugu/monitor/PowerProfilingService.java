@@ -23,16 +23,17 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Vector;
 
 import com.android.internal.os.BatteryStatsImpl;
 import com.android.internal.os.PowerProfile;
-import com.android.internal.os.ProcessStats;
-import com.android.internal.os.ProcessStats.Stats;
 import com.android.internal.app.IBatteryStats;
 
 import edu.wayne.cs.bugu.db.ConfigDAO;
 import edu.wayne.cs.bugu.db.model.Config;
-import edu.wayne.cs.bugu.display.PtopaActivity;
+import edu.wayne.cs.bugu.display.BuguActivity;
+import edu.wayne.cs.bugu.proc.ProcFileParser;
+import edu.wayne.cs.bugu.proc.Stats;
 
 import android.app.Service;
 import android.content.Context;
@@ -53,11 +54,13 @@ import android.util.SparseArray;
 /**
  * @author hchen
  */
-public class PtopaService extends Service{
+public class PowerProfilingService extends Service{
     private boolean state = false;
 	private int period=10000;
-	private static PtopaActivity mainActivity;
-
+	private static BuguActivity mainActivity;
+	private Stats stats = new Stats();
+	private ProcFileParser procParser = new ProcFileParser();
+	
     private Handler powerHandler = new Handler();
     private Runnable powerPeriodicTask = new Runnable() {
         public void run() {
@@ -80,24 +83,46 @@ public class PtopaService extends Service{
     private ConfigDAO cdao = new ConfigDAO();
     private long wifiTotalData = 0;
     private double wifiAvgPower = 0;
-    private ProcessStats processStats;
+    
+    
+    public PowerProfilingService(BuguActivity activity){
+    	this.mainActivity = activity;
+    }
     
     public boolean currentState()
     {
         return state;
     }
     
+    /**
+     * Reset everything before start a new stat.
+     * @param fw
+     * @param p
+     */
     public void reset(FileWriter fw, int p)
     {
         writer = fw;
         period = p;
         appPower.clear();
         devicePower.clear();
+
+        if(powerProfile == null)
+        {
+            powerProfile = new PowerProfile(mainActivity);
+            powerModel = new PowerModel(powerProfile, statsType);
+            powerModel.printBasicPower(writer);
+        }	            
+        // init system information
+		procParser.parseCPUSpeedTimes(stats.mSystemCPU, false);
+		stats.updateTime();
+		
         powerHandler.postDelayed(powerPeriodicTask, period);   
         state = true;
-        processStats = new ProcessStats(false);
     }
     
+    /**
+     * Stop the power profiling service.
+     */
     public void stopMonitor()
     {        
         state = false;
@@ -128,18 +153,28 @@ public class PtopaService extends Service{
 	public IBinder onBind(Intent intent) {
 		return null;
 	}
-
-	public void setMainActivity(PtopaActivity activity) {
-		mainActivity = activity;
-	}
 	
+	/**
+	 * Update system and power information.
+	 */
 	public void update(){
-        if(powerProfile == null)
-        {
-            powerProfile = new PowerProfile(mainActivity);
-            powerModel = new PowerModel(powerProfile, statsType);
-            powerModel.printBasicPower(writer);
-        }	    
+		//update system information
+		procParser.parseProcStat(stats.mSystemCPU);
+		procParser.parseCPUSpeedTimes(stats.mSystemCPU, true);		
+		//update process information
+		Vector<Integer> pids = procParser.getAllPids();
+		Stats.PidStat pidStat = null;
+		for(Integer pid : pids){
+			pidStat = stats.getPidStat(pid);
+			if(pidStat.uid == -1){//new process
+				procParser.parseProcPidStatus(pid, pidStat);
+			}
+			procParser.parseProcPidStat(pid, pidStat);
+		}
+		
+		stats.updateTime();
+		stats.dump();
+		
 		//load new battery stats
 	    loadStatsData();
 		long realTime = SystemClock.elapsedRealtime();
@@ -159,12 +194,6 @@ public class PtopaService extends Service{
            //remove old  data
            appPower.subList(999, appPower.size()).clear();
         }
-        
-        Log.i("Bugu", "battaryStats: cpu time: " + curDevicePower.cpuTime + " foreground: " + curDevicePower.foregroundTime + " speedStep: " + curDevicePower.speedStepTime);
-        long[] tms = processStats.getLastCpuSpeedTimes();
-        long ttms = 0;
-        for(int i = 0; i < tms.length; i++) ttms += tms[i];
-        Log.i("Bugu", "processStats: cpu time: " + (processStats.getLastSystemTime() + processStats.getLastUserTime()) + " idleTime: " + processStats.getLastIdleTime() + " speedStep: " + ttms);
 	}
 	
     private void estimateAppPower(long uSecTime) {
@@ -242,9 +271,6 @@ public class PtopaService extends Service{
             batteryStats = BatteryStatsImpl.CREATOR.createFromParcel(parcel);
             batteryStats.distributeWorkLocked(statsType);
         } catch (RemoteException e) {}
-   
-        //update process cpu usage
-        processStats.update();        
     }
     
 //    private double getMobileAverageDataCost(long uSecTime) {

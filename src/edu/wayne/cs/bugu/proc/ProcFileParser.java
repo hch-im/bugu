@@ -21,7 +21,10 @@ package edu.wayne.cs.bugu.proc;
 
 import static android.os.Process.*;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FilenameFilter;
+import java.util.Vector;
 
 import android.os.Process;
 import android.os.StrictMode;
@@ -35,8 +38,12 @@ public class ProcFileParser {
         PROC_SPACE_TERM|PROC_OUT_LONG,                  // 2: nice time
         PROC_SPACE_TERM|PROC_OUT_LONG,                  // 3: sys time
         PROC_SPACE_TERM|PROC_OUT_LONG,                  // 4: idle time
+        PROC_SPACE_TERM|PROC_OUT_LONG,                  // 5: iowait time
+        PROC_SPACE_TERM|PROC_OUT_LONG,                  // 6: irq time
+        PROC_SPACE_TERM|PROC_OUT_LONG,                  // 7: softirq time        
     };
-    private final long[] mProcStatLong = new long[4];
+    private final long[] mProcStatLong = new long[7];
+    //TODO should we add cutime cstime 
     // /proc/pid/stat
     private static final int[] PROC_PID_STAT_FORMAT = new int[] {
         PROC_SPACE_TERM,
@@ -62,18 +69,40 @@ public class ProcFileParser {
     private final long[] mProcPidStatusLong = new long[1];
     // /sys/devices/system/cpu/cpu0/cpufreq/stats/time_in_state
     private final String SYS_CPU_SPEED_STEPS = "/sys/devices/system/cpu/cpu0/cpufreq/stats/time_in_state";
-    
+    // proc directory
+    private final String PROC_DIR ="/proc";
+    private final FilenameFilter pidNameFilter = new FilenameFilter(){
+    	
+		@Override
+		public boolean accept(File dir, String filename) {
+    		try{
+    			Integer.parseInt(filename);
+    		}catch(NumberFormatException nfe){
+    			return false;
+    		}
+    		
+    		return true;
+		}
+    	
+    };
     
 	public void parseProcStat(Stats.SystemCPU cpuStat){
-		if(Process.readProcFile(PROC_STAT, PROC_STAT_FORMAT, null, mProcStatLong, null)){
-			cpuStat.update(mProcStatLong);
+		//When using tickless kernel, idle/iowait accounting are not doing.
+		//So the value might get outdated. Try three times, until we get the correct data.		
+		int times = 0;
+		while(times < 3){
+			if(Process.readProcFile(PROC_STAT, PROC_STAT_FORMAT, null, mProcStatLong, null)){
+				if(cpuStat.update(mProcStatLong))
+					break;
+			}
+			times++;
 		}
 	}
 	
 	public void parseProcPidStat(int pid, Stats.PidStat pidStat){
 		if(Process.readProcFile("/proc/" + pid + "/stat", 
 				PROC_PID_STAT_FORMAT, mProcPidStatString, mProcPidStatLong, null)){
-			pidStat.update(mProcPidStatString, mProcStatLong);
+			pidStat.update(mProcPidStatString, mProcPidStatLong);
 		}
 	}	
 	
@@ -91,15 +120,18 @@ public class ProcFileParser {
 		
 		String[] vals;
 		int index = 0;
-		for(String token : str.split("\n ")){
+		long time;
+		for(String token : str.split("\n")){
+			if(str.trim().length() == 0) continue;
 			try{
 				vals = token.split(" ");
 				if(!timeOnly){
 					cpuStat.mBaseCpuSpeedSteps[index] = Long.valueOf(vals[0]);
 				}
 				
-				cpuStat.mBaseCpuSpeedTime[index] = Long.valueOf(vals[1]);
-				index++;
+				time = Long.valueOf(vals[1]);
+				cpuStat.mRelCpuSpeedTimes[index] = time - cpuStat.mBaseCpuSpeedTime[index];
+				cpuStat.mBaseCpuSpeedTime[index] = time;
 			}catch (NumberFormatException nfe){
 				nfe.printStackTrace();
 			}finally{
@@ -108,6 +140,17 @@ public class ProcFileParser {
 		}
 		
 		cpuStat.mCpuSpeedStepTimes = index;
+	}
+	
+	public Vector<Integer> getAllPids(){
+		Vector<Integer> pids = new Vector<Integer>();
+		File f = new File(PROC_DIR);
+		String[] pidStrs = f.list(pidNameFilter);
+		
+		for(String pid : pidStrs)
+			pids.add(Integer.valueOf(pid));
+		
+		return pids;
 	}
 	
     private byte[] mBuffer = new byte[4096];
