@@ -25,10 +25,11 @@ import android.util.SparseArray;
 
 public class Stats {
 	public long mBaseTime = 0;
-	public final SystemCPU mSystemCPU = new SystemCPU();
+	public final SystemStat mSysStat = new SystemStat();
 	public final SparseArray<PidStat> mPidStats= new SparseArray<PidStat>();
+	public final SparseArray<UidStat> mUidStats= new SparseArray<UidStat>();
 	
-	public long mRelTime;
+	public long mRelTime; //miliseconds
 	
 	public PidStat getPidStat(int pid){
 		PidStat pStat = mPidStats.get(pid, null);
@@ -40,13 +41,28 @@ public class Stats {
 		return pStat;
 	}
 	
+	public UidStat getUidStat(int uid){
+		UidStat uStat = mUidStats.get(uid, null);
+		if(uStat == null){
+			uStat = new UidStat(uid);
+			mUidStats.append(uid, uStat);//`append` is better than `put` here
+		}
+		
+		return uStat;
+	}
+	/**
+	 * Must be invoked after stats system information.
+	 */
 	public void updateTime(){
-		long currentTime = SystemClock.elapsedRealtime();
+		long currentTime = SystemClock.elapsedRealtime() / 10;//convert to 10ms
 		mRelTime = currentTime - mBaseTime;
 		mBaseTime = currentTime;
+		//post update
+		mSysStat.postUpdateScreenBrightness(mRelTime);
 	}
 	
-	public class SystemCPU{
+	//system stats
+	public class SystemStat{
 		public long mBaseUserTime = 0;
 		public long mBaseSysTime = 0;
 		public long mBaseNiceTime = 0;
@@ -54,10 +70,11 @@ public class Stats {
 		public long mBaseIOWaitTime = 0;
 		public long mBaseIRQTime = 0;
 		public long mBaseSoftIRQTime = 0;
+		public long mBaseScreenOffTime = 0;
 		
 		public long[] mBaseCpuSpeedTime = new long[32];
 		public long[] mBaseCpuSpeedSteps = new long[32];
-		//relative time
+		//relative time in 10 milli sconds
 		//system cpu usage = (user + sys + io + irq + softirq)/(user + sys + io + irq + softirq + idle)		
 		public int mRelUserTime;
 		public int mRelSysTime;
@@ -65,12 +82,15 @@ public class Stats {
 		public int mRelIOWaitTime;
 		public int mRelIRQTime;
 		public int mRelSoftIRQTime;
-		
-		public long[] mRelCpuSpeedTimes = new long[32];
-		
+		public long[] mRelCpuSpeedTimes = new long[32];		
 		public int mCpuSpeedStepTimes = 0;		
+		
+		public long mRelScreenOffTime;
+		public static final int SCREEN_BRIGHTNESS_BINS = 51; //bin size is 5
+		private long[] mScreenBrightnessBinTimes = new long[SCREEN_BRIGHTNESS_BINS];
+		public int mRelScreenBrightness;//0 means screen is off, 1-255 means screen is on
 				
-		public boolean update(long[] data){
+		public boolean updateCPUTime(long[] data){
 			if(data == null || data.length < 4)
 				return false;
 			if(data[3] < mBaseIdleTime || data[4] < mBaseIOWaitTime)
@@ -94,6 +114,20 @@ public class Stats {
 			return true;
 		}
 		
+		public void updateScreenBrightness(int brightness){
+			mRelScreenBrightness = brightness;
+		}
+		
+		protected void postUpdateScreenBrightness(long relTime){
+			if(mRelScreenBrightness == 0){//screen off
+				mRelScreenOffTime = relTime;
+				mBaseScreenOffTime += relTime;
+			}else{
+				int bin = (mRelScreenBrightness - 1) / 5;
+				mScreenBrightnessBinTimes[bin] += relTime;
+			}
+		}
+		
 		/**
 		 * cpu time = user+system+nice+idle+iowait+irq+softirq
 		 * @return
@@ -103,6 +137,7 @@ public class Stats {
 		}
 	}
 	
+	//process stats
 	public class PidStat{
 		public int pid;
 		public int uid = -1;
@@ -134,22 +169,32 @@ public class Stats {
 			mBaseSysTime = longData[4];
 		}
 	}
+
+	//application stats
+	public class UidStat{
+		public int uid;
+		public String name = null;
+		
+		public UidStat(int uid){
+			this.uid = uid;
+		}
+	}
 	
 	public void dump(){
 		StringBuffer msg = new StringBuffer();
-		msg.append("interval: ").append(mRelTime).append(" ms\r\n");
-		msg.append("cpu time: ").append(mSystemCPU.relCPUTime()).append(" jiffies(10ms)\r\n");			
-		msg.append("(user + sys) time: ").append(mSystemCPU.mRelSysTime + mSystemCPU.mRelUserTime).append(" jiffies(10ms)\r\n");
-		msg.append("idle time: ").append(mSystemCPU.mRelIdleTime).append(" base:(").append(mSystemCPU.mBaseIdleTime).append(") jiffies(10ms)\r\n");	
-		msg.append("io wait time: ").append(mSystemCPU.mRelIOWaitTime).append(" jiffies(10ms)\r\n");	
-		msg.append("irq time: ").append(mSystemCPU.mRelIRQTime).append(" jiffies(10ms)\r\n");	
-		msg.append("softirq time: ").append(mSystemCPU.mRelSoftIRQTime).append(" base:(").append(mSystemCPU.mBaseSoftIRQTime).append(") jiffies(10ms)\r\n");	
+		msg.append("interval: ").append(mRelTime).append(" 10 ms\r\n");
+		msg.append("cpu time: ").append(mSysStat.relCPUTime()).append(" jiffies(10ms)\r\n");			
+		msg.append("(user + sys) time: ").append(mSysStat.mRelSysTime + mSysStat.mRelUserTime).append(" jiffies(10ms)\r\n");
+		msg.append("idle time: ").append(mSysStat.mRelIdleTime).append(" base:(").append(mSysStat.mBaseIdleTime).append(") jiffies(10ms)\r\n");	
+		msg.append("io wait time: ").append(mSysStat.mRelIOWaitTime).append(" jiffies(10ms)\r\n");	
+		msg.append("irq time: ").append(mSysStat.mRelIRQTime).append(" jiffies(10ms)\r\n");	
+		msg.append("softirq time: ").append(mSysStat.mRelSoftIRQTime).append(" base:(").append(mSysStat.mBaseSoftIRQTime).append(") jiffies(10ms)\r\n");	
 		
 		long speedTime = 0;
-		for(int i = 0; i < mSystemCPU.mCpuSpeedStepTimes; i++){
-			speedTime += mSystemCPU.mRelCpuSpeedTimes[i];
+		for(int i = 0; i < mSysStat.mCpuSpeedStepTimes; i++){
+			speedTime += mSysStat.mRelCpuSpeedTimes[i];
 		}
-		msg.append("speed step time: ").append(speedTime).append(" speed 0:(").append(mSystemCPU.mRelCpuSpeedTimes[0]).append(") jiffies(10ms)\r\n");		
+		msg.append("speed step time: ").append(speedTime).append(" speed 0:(").append(mSysStat.mRelCpuSpeedTimes[0]).append(") jiffies(10ms)\r\n");		
 		
 		long pidtimes = 0;		
 		for(int i = 0; i < mPidStats.size(); i++){

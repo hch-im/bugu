@@ -43,7 +43,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 
 public class BuguActivity extends Activity implements OnClickListener{
-    private int period=10000;
+    private int period=1000;
 	private PowerProfilingService ptopaService = null;
     private PtopaReceiver receiver = null;
     private Handler eventHandler = new Handler();

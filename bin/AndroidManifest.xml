@@ -32,7 +32,7 @@
     <uses-permission android:name="android.permission.MOVE_PACKAGE" />
     <uses-permission android:name="android.permission.MANAGE_USB" />    
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-sdk android:minSdkVersion="15" />
+    <uses-sdk android:minSdkVersion ="10" android:targetSdkVersion="15" />
     <application
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name" >
@@ -65,6 +65,6 @@
         <activity android:label="@string/app_name" android:name="edu.wayne.cs.bugu.display.PFigureResultActivity"></activity>
         <activity android:label="@string/app_name" android:name="edu.wayne.cs.bugu.display.EFigureResultActivity"></activity>
         <activity android:name="edu.wayne.cs.bugu.display.ComparePowerActivity" android:label="@string/app_name"></activity>                   
-    </application>
+        </application>
 
 </manifest>

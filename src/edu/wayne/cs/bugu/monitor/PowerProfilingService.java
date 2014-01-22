@@ -27,6 +27,7 @@ import java.util.Vector;
 
 import com.android.internal.os.BatteryStatsImpl;
 import com.android.internal.os.PowerProfile;
+import com.android.internal.os.ProcessStats;
 import com.android.internal.app.IBatteryStats;
 
 import edu.wayne.cs.bugu.db.ConfigDAO;
@@ -36,8 +37,10 @@ import edu.wayne.cs.bugu.proc.ProcFileParser;
 import edu.wayne.cs.bugu.proc.Stats;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.hardware.SensorManager;
 import android.os.BatteryStats;
@@ -49,6 +52,8 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.BatteryStats.Uid;
+import android.provider.Settings;
+import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.util.SparseArray;
 /**
@@ -56,7 +61,7 @@ import android.util.SparseArray;
  */
 public class PowerProfilingService extends Service{
     private boolean state = false;
-	private int period=10000;
+	private int period=1000;
 	private static BuguActivity mainActivity;
 	private Stats stats = new Stats();
 	private ProcFileParser procParser = new ProcFileParser();
@@ -75,16 +80,15 @@ public class PowerProfilingService extends Service{
 	private PowerProfile powerProfile = null;
     private IBatteryStats batteryInfo;
     private PowerModel powerModel = null;    
-    private ArrayList<HashMap<Integer, AppPowerInfo>> appPower= new ArrayList<HashMap<Integer, AppPowerInfo>>();
+    private ArrayList<SparseArray<AppPowerInfo>> appPower= new ArrayList<SparseArray<AppPowerInfo>>();
     private ArrayList<DevicePowerInfo> devicePower = new ArrayList<DevicePowerInfo>();
-    private HashMap<Integer, AppPowerInfo> curAppPower = null;
+    private SparseArray<AppPowerInfo> curAppPower = null;
     private DevicePowerInfo curDevicePower = null;
     
     private ConfigDAO cdao = new ConfigDAO();
     private long wifiTotalData = 0;
     private double wifiAvgPower = 0;
-    
-    
+    	
     public PowerProfilingService(BuguActivity activity){
     	this.mainActivity = activity;
     }
@@ -113,7 +117,7 @@ public class PowerProfilingService extends Service{
             powerModel.printBasicPower(writer);
         }	            
         // init system information
-		procParser.parseCPUSpeedTimes(stats.mSystemCPU, false);
+		procParser.parseCPUSpeedTimes(stats.mSysStat, false);
 		stats.updateTime();
 		
         powerHandler.postDelayed(powerPeriodicTask, period);   
@@ -135,7 +139,7 @@ public class PowerProfilingService extends Service{
 
 	@Override
 	public void onCreate() {
-		super.onCreate();        		
+		super.onCreate();
 	}
 
 	@Override
@@ -153,14 +157,16 @@ public class PowerProfilingService extends Service{
 	public IBinder onBind(Intent intent) {
 		return null;
 	}
-	
+
 	/**
 	 * Update system and power information.
 	 */
 	public void update(){
 		//update system information
-		procParser.parseProcStat(stats.mSystemCPU);
-		procParser.parseCPUSpeedTimes(stats.mSystemCPU, true);		
+		procParser.parseProcStat(stats.mSysStat);
+		procParser.parseCPUSpeedTimes(stats.mSysStat, true);
+		procParser.parseScreenBrightness(stats.mSysStat);
+		
 		//update process information
 		Vector<Integer> pids = procParser.getAllPids();
 		Stats.PidStat pidStat = null;
@@ -173,18 +179,21 @@ public class PowerProfilingService extends Service{
 		}
 		
 		stats.updateTime();
-		stats.dump();
+//		stats.dump();
+		//init the new objects for recording power information
+		curAppPower = new SparseArray<AppPowerInfo>();
+		curDevicePower = new DevicePowerInfo();
+		appPower.add(0, curAppPower);
+		devicePower.add(0, curDevicePower);
+	
+		powerModel.calculatePower(stats, curDevicePower, curAppPower);
 		
+		//TODO modify the following part of code
 		//load new battery stats
 	    loadStatsData();
 		long realTime = SystemClock.elapsedRealtime();
         long uSecTime = batteryStats.computeBatteryRealtime(realTime * 1000, statsType);  
-        
-		curAppPower = new HashMap<Integer, AppPowerInfo>();
-		curDevicePower = new DevicePowerInfo();
-		powerModel.setDevicePowerInfo(curDevicePower);
-		appPower.add(0, curAppPower);
-		devicePower.add(0, curDevicePower);
+      
         estimateAppPower(uSecTime);
         estimateDevicePower(uSecTime);
         writePower(realTime);
@@ -205,15 +214,12 @@ public class PowerProfilingService extends Service{
         final int NU = uidStats.size();
         for (int iu = 0; iu < NU; iu++) {
             Uid u = uidStats.valueAt(iu);
-            AppPowerInfo appInfo = new AppPowerInfo();
+            AppPowerInfo appInfo = curAppPower.get(u.getUid());
+            if(appInfo == null)
+            	appInfo = new AppPowerInfo();
             appInfo.id = u.getUid();
             
-            curAppPower.put(u.getUid(), appInfo);
             powerModel.setAppPowerInfo(appInfo);
-            //estimate power
-            powerModel.appCPUPower(u.getProcessStats());
-//            SparseArray<? extends Uid.Pid> pidStats = u.getPidStats();
-//            powerModel.newAppCPUPower(pidStats, processStats);
             powerModel.appWakelockPower(u.getWakelockStats(), uSecTime);
             //did not distinguish 3G and wifi
             powerModel.appNetworkPower(u.getTcpBytesReceived(statsType), 
@@ -239,7 +245,6 @@ public class PowerProfilingService extends Service{
     private void estimateDevicePower(long uSecTime) {
         long phoneOnTime = batteryStats.getPhoneOnTime(uSecTime, statsType);
         powerModel.phonePower(phoneOnTime);
-        powerModel.screenPower(batteryStats, uSecTime);
         powerModel.radioPower(batteryStats, uSecTime);
         
         long wifiOnTime = batteryStats.getWifiOnTime(uSecTime, statsType);
@@ -306,7 +311,7 @@ public class PowerProfilingService extends Service{
             }
             else
             {
-                powerPerKB = (wifiActivePower * wifiRunTime * PowerModel.voltage / 1000) / (wifiData / 1024); //mJ/kb
+                powerPerKB = (wifiActivePower * wifiRunTime / 1000) / (wifiData / 1024); //mJ/kb
                 //save data
                 if(wifiData > wifiTotalData)
                 {
@@ -350,11 +355,9 @@ public class PowerProfilingService extends Service{
     private long getAppWifiRunTime()
     {
     	long appWifiRunTime = 0;
-    	Collection<AppPowerInfo> info = curAppPower.values();
-    	for (Iterator<AppPowerInfo> it = info.iterator(); it.hasNext();)
-    	{
-    		AppPowerInfo pInfo = it.next();
-    		appWifiRunTime += pInfo.wifiRunTime;
+    	for(int i = 0 ; i < curAppPower.size(); i++){
+    		AppPowerInfo pInfo = curAppPower.valueAt(i);
+    		appWifiRunTime += pInfo.wifiRunTime;    		
     	}
     	
     	return appWifiRunTime;
@@ -366,10 +369,8 @@ public class PowerProfilingService extends Service{
     		return;
         try{
             writer.write("TIME: " + uSec + "\r\n");
-            Collection<AppPowerInfo> info = curAppPower.values();
-            for (Iterator<AppPowerInfo> it = info.iterator(); it.hasNext();)
-            {
-                AppPowerInfo pInfo = it.next();
+        	for(int i = 0 ; i < curAppPower.size(); i++){
+        		AppPowerInfo pInfo = curAppPower.valueAt(i);
                 pInfo.write(writer);
             }
             curDevicePower.writePower(writer);            

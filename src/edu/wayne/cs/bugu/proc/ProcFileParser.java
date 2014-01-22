@@ -29,6 +29,8 @@ import java.util.Vector;
 import android.os.Process;
 import android.os.StrictMode;
 
+import edu.wayne.cs.bugu.util.NativeLib;
+
 public class ProcFileParser {
 	// /proc/stat
 	private static final String PROC_STAT = "/proc/stat";
@@ -71,8 +73,7 @@ public class ProcFileParser {
     private final String SYS_CPU_SPEED_STEPS = "/sys/devices/system/cpu/cpu0/cpufreq/stats/time_in_state";
     // proc directory
     private final String PROC_DIR ="/proc";
-    private final FilenameFilter pidNameFilter = new FilenameFilter(){
-    	
+    private final FilenameFilter pidNameFilter = new FilenameFilter(){    	
 		@Override
 		public boolean accept(File dir, String filename) {
     		try{
@@ -85,18 +86,31 @@ public class ProcFileParser {
 		}
     	
     };
+    // screen 
+    private final String SYS_LEDS_BRIGHTNESS = "/sys/class/leds/lcd-backlight/brightness";
+//    private NativeLib natLib = new NativeLib();
     
-	public void parseProcStat(Stats.SystemCPU cpuStat){
+	public void parseProcStat(Stats.SystemStat cpuStat){
 		//When using tickless kernel, idle/iowait accounting are not doing.
 		//So the value might get outdated. Try three times, until we get the correct data.		
 		int times = 0;
 		while(times < 3){
 			if(Process.readProcFile(PROC_STAT, PROC_STAT_FORMAT, null, mProcStatLong, null)){
-				if(cpuStat.update(mProcStatLong))
+				if(cpuStat.updateCPUTime(mProcStatLong))
 					break;
 			}
 			times++;
 		}
+		
+//		if(Process.readProcFile(PROC_STAT, PROC_STAT_FORMAT, null, mProcStatLong, null)){
+//			long idle = natLib.getCPUIdleTime(4);
+//			long iow = natLib.getCPUIOWaitTime(4);
+//			mProcStatLong[3] = idle;
+//			mProcStatLong[4] = iow;
+//			
+//			cpuStat.update(mProcStatLong);
+//		}
+			
 	}
 	
 	public void parseProcPidStat(int pid, Stats.PidStat pidStat){
@@ -113,7 +127,7 @@ public class ProcFileParser {
         	pidStat.uid = (int) mProcPidStatusLong[0];
 	}
 	
-	public void parseCPUSpeedTimes(Stats.SystemCPU cpuStat, boolean timeOnly){
+	public void parseCPUSpeedTimes(Stats.SystemStat cpuStat, boolean timeOnly){
 		String str = readFile(SYS_CPU_SPEED_STEPS, 512);
 		if(str == null)
 			return;
@@ -140,6 +154,15 @@ public class ProcFileParser {
 		}
 		
 		cpuStat.mCpuSpeedStepTimes = index;
+	}
+	
+	public void parseScreenBrightness(Stats.SystemStat st){
+		String str = readFile(SYS_LEDS_BRIGHTNESS, 8);
+		if(str == null)
+			return;
+		
+		int brightness = Integer.valueOf(str.split("\n")[0]);
+		st.updateScreenBrightness(brightness);
 	}
 	
 	public Vector<Integer> getAllPids(){
