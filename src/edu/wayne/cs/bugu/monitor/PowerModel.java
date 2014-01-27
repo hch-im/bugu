@@ -21,6 +21,7 @@ package edu.wayne.cs.bugu.monitor;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.util.Arrays;
 import java.util.Map;
 
 import android.hardware.SensorManager;
@@ -49,6 +50,8 @@ public class PowerModel {
 	    for (int p = 0; p < speedSteps; p++) {
 	    	speedStepAvgPower[p] = powerProfile.getAveragePower(PowerProfile.POWER_CPU_ACTIVE, p);// mA
 	    }   
+	    //on some platform (such as galaxy s4), this may in reverse order
+	    Arrays.sort(speedStepAvgPower);
 	}
 	
 	public void calculatePower(Stats st, DevicePowerInfo devPower, SparseArray<AppPowerInfo> appPower){

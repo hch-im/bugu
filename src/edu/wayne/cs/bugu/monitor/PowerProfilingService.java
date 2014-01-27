@@ -179,8 +179,8 @@ public class PowerProfilingService extends Service{
 		curDevicePower = new DevicePowerInfo();
 		powerModel.calculatePower(stats, curDevicePower, curAppPower);
 		
-		stats.dump();
-		curDevicePower.dump();
+//		stats.dump();
+//		curDevicePower.dump();
 		//TODO modify the following part of code
 		//load new battery stats
 //	    loadStatsData();
