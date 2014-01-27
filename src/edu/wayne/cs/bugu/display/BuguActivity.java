@@ -146,7 +146,7 @@ public class BuguActivity extends Activity implements OnClickListener{
         initReceiver();
         if(writer == null) return false;
         receiver.reset(writer);
-        ptopaService.reset(writer, period);
+        ptopaService.startMonitor(writer, period);
 //        eventHandler.postDelayed(eventPeriodicTask, period);
 //        state = true;        
         

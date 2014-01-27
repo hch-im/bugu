@@ -3,6 +3,8 @@ package edu.wayne.cs.bugu.monitor;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import android.util.Log;
+
 public class DevicePowerInfo {
 	double cpuPower = 0;
 	double wifiPower = 0;
@@ -15,19 +17,6 @@ public class DevicePowerInfo {
 	double radioPower = 0;
 	double idlePower = 0;
 	double dspPower = 0;
-	
-	double phoneOnTime = 0;
-	double screenOnTime = 0;
-	double signalTime = 0;
-	double scanTime = 0;
-	double wifiOnTime = 0;
-	double wifiRunTime = 0;
-	double idleTime = 0;
-	double bluetoothOnTime = 0;
-    double dspOnTime = 0;
-    double cpuTime = 0;
-    double foregroundTime = 0;
-    double speedStepTime = 0;
     
 	public void writePower(FileWriter io)throws IOException
 	{
@@ -45,19 +34,6 @@ public class DevicePowerInfo {
 	                dspPower +
 	                "\r\n"
 	                  );
-
-            io.write("DEVINFO: " +
-                    phoneOnTime + "," +
-                    screenOnTime + "," +
-                    signalTime + "," +
-                    scanTime + "," +
-                    wifiOnTime + "," +
-                    wifiRunTime + "," +
-                    idleTime + "," +
-                    bluetoothOnTime + "," + 
-                    dspOnTime + 
-                    "\r\n"
-                      );	        
 	}
 	
 	public double totalPower()
@@ -74,5 +50,12 @@ public class DevicePowerInfo {
 	     radioPower +
 	     idlePower +
 	     dspPower;
+	}
+	
+	public void dump(){
+		StringBuffer msg = new StringBuffer();
+		msg.append("cpu power:").append(cpuPower).append("\r\n");
+		msg.append("screen power:").append(screenPower).append("\r\n");		
+		Log.i("Bugu", msg.toString());
 	}
 }

@@ -63,34 +63,31 @@ public class PowerProfilingService extends Service{
     private boolean state = false;
 	private int period=1000;
 	private static BuguActivity mainActivity;
-	private Stats stats = new Stats();
-	private ProcFileParser procParser = new ProcFileParser();
+	private Stats stats = null;
+	private ProcFileParser procParser = null;
 	
-    private Handler powerHandler = new Handler();
-    private Runnable powerPeriodicTask = new Runnable() {
-        public void run() {
-            update();
-            if(state)
-                powerHandler.postDelayed(powerPeriodicTask, period);
-        }
-    };    
+    private Handler powerHandler = null;
+    private Runnable powerPeriodicTask = null;    
 	private FileWriter writer = null;
-    private int statsType = BatteryStats.STATS_SINCE_CHARGED;
-	private BatteryStatsImpl batteryStats;
 	private PowerProfile powerProfile = null;
-    private IBatteryStats batteryInfo;
     private PowerModel powerModel = null;    
-    private ArrayList<SparseArray<AppPowerInfo>> appPower= new ArrayList<SparseArray<AppPowerInfo>>();
-    private ArrayList<DevicePowerInfo> devicePower = new ArrayList<DevicePowerInfo>();
     private SparseArray<AppPowerInfo> curAppPower = null;
-    private DevicePowerInfo curDevicePower = null;
-    
-    private ConfigDAO cdao = new ConfigDAO();
-    private long wifiTotalData = 0;
-    private double wifiAvgPower = 0;
+    private DevicePowerInfo curDevicePower = null;    
+    private ConfigDAO cdao = null;
     	
     public PowerProfilingService(BuguActivity activity){
-    	this.mainActivity = activity;
+    	mainActivity = activity;
+    	stats = new Stats();
+    	cdao = new ConfigDAO();
+    	procParser = new ProcFileParser();
+    	powerHandler = new Handler();
+    	powerPeriodicTask = new Runnable() {
+            public void run() {
+                update();
+                if(state)
+                    powerHandler.postDelayed(powerPeriodicTask, period);
+            }
+        };    	
     }
     
     public boolean currentState()
@@ -103,17 +100,15 @@ public class PowerProfilingService extends Service{
      * @param fw
      * @param p
      */
-    public void reset(FileWriter fw, int p)
+    public void startMonitor(FileWriter fw, int p)
     {
         writer = fw;
         period = p;
-        appPower.clear();
-        devicePower.clear();
 
         if(powerProfile == null)
         {
             powerProfile = new PowerProfile(mainActivity);
-            powerModel = new PowerModel(powerProfile, statsType);
+            powerModel = new PowerModel(powerProfile);
             powerModel.printBasicPower(writer);
         }	            
         // init system information
@@ -179,104 +174,96 @@ public class PowerProfilingService extends Service{
 		}
 		
 		stats.updateTime();
-//		stats.dump();
 		//init the new objects for recording power information
 		curAppPower = new SparseArray<AppPowerInfo>();
 		curDevicePower = new DevicePowerInfo();
-		appPower.add(0, curAppPower);
-		devicePower.add(0, curDevicePower);
-	
 		powerModel.calculatePower(stats, curDevicePower, curAppPower);
 		
+		stats.dump();
+		curDevicePower.dump();
 		//TODO modify the following part of code
 		//load new battery stats
-	    loadStatsData();
-		long realTime = SystemClock.elapsedRealtime();
-        long uSecTime = batteryStats.computeBatteryRealtime(realTime * 1000, statsType);  
-      
-        estimateAppPower(uSecTime);
-        estimateDevicePower(uSecTime);
-        writePower(realTime);
-        //only record the last 1000 records
-        if(appPower.size() > 1500)
-        {
-           //remove old  data
-           appPower.subList(999, appPower.size()).clear();
-        }
+//	    loadStatsData();
+//		long realTime = SystemClock.elapsedRealtime();
+//        long uSecTime = batteryStats.computeBatteryRealtime(realTime * 1000, statsType);  
+//      
+//        estimateAppPower(uSecTime);
+//        estimateDevicePower(uSecTime);
+        writePower(stats);
 	}
 	
-    private void estimateAppPower(long uSecTime) {
-        SensorManager sensorManager = (SensorManager)mainActivity.getSystemService(Context.SENSOR_SERVICE);
-        double wifiPowerPerKB = getWifiAverageDataCost(uSecTime); 
-//        log("wifiPowerPerKB: " + wifiPowerPerKB + "\r\n");
-        
-        SparseArray<? extends Uid> uidStats = batteryStats.getUidStats();
-        final int NU = uidStats.size();
-        for (int iu = 0; iu < NU; iu++) {
-            Uid u = uidStats.valueAt(iu);
-            AppPowerInfo appInfo = curAppPower.get(u.getUid());
-            if(appInfo == null)
-            	appInfo = new AppPowerInfo();
-            appInfo.id = u.getUid();
-            
-            powerModel.setAppPowerInfo(appInfo);
-            powerModel.appWakelockPower(u.getWakelockStats(), uSecTime);
-            //did not distinguish 3G and wifi
-            powerModel.appNetworkPower(u.getTcpBytesReceived(statsType), 
-            						   u.getTcpBytesSent(statsType), 
-            						   u.getWifiRunningTime(uSecTime, statsType),
-            						   wifiPowerPerKB);
-            powerModel.appSensorPower(u.getSensorStats(), uSecTime, sensorManager);
-            powerModel.appIOPower(u.getPidStats());
-            powerModel.appMediaPower(u.getAudioTurnedOnTime(uSecTime, statsType), 
-                                     u.getVideoTurnedOnTime(uSecTime, statsType));
-            //total power
-            if (u.getUid() == Process.WIFI_UID) {
-                double appPower = appInfo.totalPower();
-                curDevicePower.wifiPower += appPower;
-            } else if (u.getUid() == Process.BLUETOOTH_GID) {
-                double appPower = appInfo.totalPower();
-                curDevicePower.buletoothPower += appPower;
-            }
-        }
-            
-    }
+//    private void estimateAppPower(long uSecTime) {
+//        SensorManager sensorManager = (SensorManager)mainActivity.getSystemService(Context.SENSOR_SERVICE);
+//        double wifiPowerPerKB = getWifiAverageDataCost(uSecTime); 
+////        log("wifiPowerPerKB: " + wifiPowerPerKB + "\r\n");
+//        
+//        SparseArray<? extends Uid> uidStats = batteryStats.getUidStats();
+//        final int NU = uidStats.size();
+//        for (int iu = 0; iu < NU; iu++) {
+//            Uid u = uidStats.valueAt(iu);
+//            AppPowerInfo appInfo = curAppPower.get(u.getUid());
+//            if(appInfo == null)
+//            	appInfo = new AppPowerInfo();
+//            appInfo.id = u.getUid();
+//            
+//            powerModel.setAppPowerInfo(appInfo);
+//            powerModel.appWakelockPower(u.getWakelockStats(), uSecTime);
+//            //did not distinguish 3G and wifi
+//            powerModel.appNetworkPower(u.getTcpBytesReceived(statsType), 
+//            						   u.getTcpBytesSent(statsType), 
+//            						   u.getWifiRunningTime(uSecTime, statsType),
+//            						   wifiPowerPerKB);
+//            powerModel.appSensorPower(u.getSensorStats(), uSecTime, sensorManager);
+//            powerModel.appIOPower(u.getPidStats());
+//            powerModel.appMediaPower(u.getAudioTurnedOnTime(uSecTime, statsType), 
+//                                     u.getVideoTurnedOnTime(uSecTime, statsType));
+//            //total power
+//            if (u.getUid() == Process.WIFI_UID) {
+//                double appPower = appInfo.totalPower();
+//                curDevicePower.wifiPower += appPower;
+//            } else if (u.getUid() == Process.BLUETOOTH_GID) {
+//                double appPower = appInfo.totalPower();
+//                curDevicePower.buletoothPower += appPower;
+//            }
+//        }
+//            
+//    }
     
-    private void estimateDevicePower(long uSecTime) {
-        long phoneOnTime = batteryStats.getPhoneOnTime(uSecTime, statsType);
-        powerModel.phonePower(phoneOnTime);
-        powerModel.radioPower(batteryStats, uSecTime);
-        
-        long wifiOnTime = batteryStats.getWifiOnTime(uSecTime, statsType);
-        long wifiRunTime = batteryStats.getGlobalWifiRunningTime(uSecTime, statsType);
-        wifiRunTime -= getAppWifiRunTime();        
-        if (wifiRunTime < 0) wifiRunTime = 0;        
-        powerModel.wifiPower(wifiOnTime, wifiRunTime);
-        
-        long idleTime = (uSecTime - batteryStats.getScreenOnTime(uSecTime, statsType));
-        powerModel.idlePower(idleTime);
-        
-        long btOnTime = batteryStats.getBluetoothOnTime(uSecTime, statsType);
-        int btPingCount = batteryStats.getBluetoothPingCount();
-        powerModel.bluetoothPower(btOnTime, btPingCount);
-    }
+//    private void estimateDevicePower(long uSecTime) {
+//        long phoneOnTime = batteryStats.getPhoneOnTime(uSecTime, statsType);
+//        powerModel.phonePower(phoneOnTime);
+//        powerModel.radioPower(batteryStats, uSecTime);
+//        
+//        long wifiOnTime = batteryStats.getWifiOnTime(uSecTime, statsType);
+//        long wifiRunTime = batteryStats.getGlobalWifiRunningTime(uSecTime, statsType);
+//        wifiRunTime -= getAppWifiRunTime();        
+//        if (wifiRunTime < 0) wifiRunTime = 0;        
+//        powerModel.wifiPower(wifiOnTime, wifiRunTime);
+//        
+//        long idleTime = (uSecTime - batteryStats.getScreenOnTime(uSecTime, statsType));
+//        powerModel.idlePower(idleTime);
+//        
+//        long btOnTime = batteryStats.getBluetoothOnTime(uSecTime, statsType);
+//        int btPingCount = batteryStats.getBluetoothPingCount();
+//        powerModel.bluetoothPower(btOnTime, btPingCount);
+//    }
     
-    private void loadStatsData() {
-    	if(batteryInfo == null)
-    	    batteryInfo = IBatteryStats.Stub.asInterface(ServiceManager.getService("batteryinfo"));
-	    if(batteryInfo == null)
-	    {
-	    	Log.w("pTopA: ", "load : failed to create batteryInfo service.");
-	    }
-        try {
-            byte[] data = batteryInfo.getStatistics();
-            Parcel parcel = Parcel.obtain();
-            parcel.unmarshall(data, 0, data.length);
-            parcel.setDataPosition(0);
-            batteryStats = BatteryStatsImpl.CREATOR.createFromParcel(parcel);
-            batteryStats.distributeWorkLocked(statsType);
-        } catch (RemoteException e) {}
-    }
+//    private void loadStatsData() {
+//    	if(batteryInfo == null)
+//    	    batteryInfo = IBatteryStats.Stub.asInterface(ServiceManager.getService("batteryinfo"));
+//	    if(batteryInfo == null)
+//	    {
+//	    	Log.w("pTopA: ", "load : failed to create batteryInfo service.");
+//	    }
+//        try {
+//            byte[] data = batteryInfo.getStatistics();
+//            Parcel parcel = Parcel.obtain();
+//            parcel.unmarshall(data, 0, data.length);
+//            parcel.setDataPosition(0);
+//            batteryStats = BatteryStatsImpl.CREATOR.createFromParcel(parcel);
+//            batteryStats.distributeWorkLocked(statsType);
+//        } catch (RemoteException e) {}
+//    }
     
 //    private double getMobileAverageDataCost(long uSecTime) {
 //        final double threeGPower = powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ACTIVE);
@@ -288,109 +275,96 @@ public class PowerProfilingService extends Service{
 //        return powerPerKB;
 //    }
 
-    private double getWifiAverageDataCost(long uSecTime) {        
-        if(wifiAvgPower == 0){        
-            //load from database
-            Config c1 = cdao.get("wifiTotalData");
-            if(c1 != null) wifiTotalData = Long.valueOf(c1.getValue());
-            Config c2 = cdao.get("wifiAvgPower");
-            if(c2 != null) wifiAvgPower = Double.valueOf(c2.getValue());
-            
-            final double wifiActivePower = powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ACTIVE);
-            //data received and sent from last unplug
-            final long mobileData = batteryStats.getMobileTcpBytesReceived(statsType) +
-                    batteryStats.getMobileTcpBytesSent(statsType);
-            final long wifiData = batteryStats.getTotalTcpBytesReceived(statsType) +
-                    batteryStats.getTotalTcpBytesSent(statsType) - mobileData;
-            
-            long wifiRunTime = batteryStats.getGlobalWifiRunningTime(uSecTime, statsType) / 1000; //ms
-//            log("DEV--- mobileData:" + mobileData + " wifiData: " + wifiData + " wifiRunTime: " + wifiRunTime);        
-            double powerPerKB;
-            if(wifiData == 0){
-                return 0;
-            }
-            else
-            {
-                powerPerKB = (wifiActivePower * wifiRunTime / 1000) / (wifiData / 1024); //mJ/kb
-                //save data
-                if(wifiData > wifiTotalData)
-                {
-                    if(c1 == null)
-                    {
-                        c1 = new Config();
-                        c1.setName("wifiTotalData");
-                        c1.setValue(wifiData+"");
-                        cdao.insert(c1);
-                    }
-                    else
-                    {
-                        c1.setValue(wifiData+"");
-                        cdao.update(c1);
-                    }
-                    
-                    if(c2 == null)
-                    {
-                        c2 = new Config();
-                        c2.setName("wifiAvgPower");
-                        c2.setValue(powerPerKB+"");
-                        cdao.insert(c2);
-                    }
-                    else
-                    {
-                        c2.setValue(powerPerKB+"");
-                        cdao.update(c2);
-                    }                    
-                }
-                
-                return powerPerKB;
-            }
-            
-        }        
-        else
-        {
-            return wifiAvgPower;
-        }
-    }
+//    private double getWifiAverageDataCost(long uSecTime) {        
+//        if(wifiAvgPower == 0){        
+//            //load from database
+//            Config c1 = cdao.get("wifiTotalData");
+//            if(c1 != null) wifiTotalData = Long.valueOf(c1.getValue());
+//            Config c2 = cdao.get("wifiAvgPower");
+//            if(c2 != null) wifiAvgPower = Double.valueOf(c2.getValue());
+//            
+//            final double wifiActivePower = powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ACTIVE);
+//            //data received and sent from last unplug
+//            final long mobileData = batteryStats.getMobileTcpBytesReceived(statsType) +
+//                    batteryStats.getMobileTcpBytesSent(statsType);
+//            final long wifiData = batteryStats.getTotalTcpBytesReceived(statsType) +
+//                    batteryStats.getTotalTcpBytesSent(statsType) - mobileData;
+//            
+//            long wifiRunTime = batteryStats.getGlobalWifiRunningTime(uSecTime, statsType) / 1000; //ms
+////            log("DEV--- mobileData:" + mobileData + " wifiData: " + wifiData + " wifiRunTime: " + wifiRunTime);        
+//            double powerPerKB;
+//            if(wifiData == 0){
+//                return 0;
+//            }
+//            else
+//            {
+//                powerPerKB = (wifiActivePower * wifiRunTime / 1000) / (wifiData / 1024); //mJ/kb
+//                //save data
+//                if(wifiData > wifiTotalData)
+//                {
+//                    if(c1 == null)
+//                    {
+//                        c1 = new Config();
+//                        c1.setName("wifiTotalData");
+//                        c1.setValue(wifiData+"");
+//                        cdao.insert(c1);
+//                    }
+//                    else
+//                    {
+//                        c1.setValue(wifiData+"");
+//                        cdao.update(c1);
+//                    }
+//                    
+//                    if(c2 == null)
+//                    {
+//                        c2 = new Config();
+//                        c2.setName("wifiAvgPower");
+//                        c2.setValue(powerPerKB+"");
+//                        cdao.insert(c2);
+//                    }
+//                    else
+//                    {
+//                        c2.setValue(powerPerKB+"");
+//                        cdao.update(c2);
+//                    }                    
+//                }
+//                
+//                return powerPerKB;
+//            }
+//            
+//        }        
+//        else
+//        {
+//            return wifiAvgPower;
+//        }
+//    }
     
-    private long getAppWifiRunTime()
-    {
-    	long appWifiRunTime = 0;
-    	for(int i = 0 ; i < curAppPower.size(); i++){
-    		AppPowerInfo pInfo = curAppPower.valueAt(i);
-    		appWifiRunTime += pInfo.wifiRunTime;    		
-    	}
-    	
-    	return appWifiRunTime;
-    }
+//    private long getAppWifiRunTime()
+//    {
+//    	long appWifiRunTime = 0;
+//    	for(int i = 0 ; i < curAppPower.size(); i++){
+//    		AppPowerInfo pInfo = curAppPower.valueAt(i);
+//    		appWifiRunTime += pInfo.wifiRunTime;    		
+//    	}
+//    	
+//    	return appWifiRunTime;
+//    }
     
-    private void writePower(long uSec)
+    private void writePower(Stats st)
     {
     	if(writer == null)
     		return;
         try{
-            writer.write("TIME: " + uSec + "\r\n");
+            writer.write("TIME: " + st.mBaseTime + "," + st.mRelTime + "\r\n");
         	for(int i = 0 ; i < curAppPower.size(); i++){
         		AppPowerInfo pInfo = curAppPower.valueAt(i);
                 pInfo.write(writer);
             }
             curDevicePower.writePower(writer);            
-            Log.i("pTopA: ", "done write power " + uSec);
         }catch(Exception ex){
         	ex.printStackTrace();
         }
         
     }
-   
-//    private void log(String info)
-//    {
-//        if(writer == null)
-//            return;
-//        try{            
-//            writer.write("LOG: " + info);
-//            writer.flush();
-//        }catch(Exception ex){
-//            ex.printStackTrace();
-//        }        
-//    }
    
 }

@@ -82,6 +82,7 @@ public class Stats {
 		public int mRelIOWaitTime;
 		public int mRelIRQTime;
 		public int mRelSoftIRQTime;
+		public int mRelCPUTime;//the summation of all the previous times
 		public long[] mRelCpuSpeedTimes = new long[32];		
 		public int mCpuSpeedStepTimes = 0;		
 		
@@ -109,8 +110,9 @@ public class Stats {
 			mBaseIdleTime = data[3];
 			mBaseIOWaitTime = data[4];
 			mBaseIRQTime = data[5];
-			mBaseSoftIRQTime = data[6];
-			
+			mBaseSoftIRQTime = data[6];			
+			mRelCPUTime = mRelUserTime + mRelSysTime + mRelIdleTime + mRelIOWaitTime + mRelIRQTime + mRelSoftIRQTime;
+
 			return true;
 		}
 		
@@ -133,7 +135,7 @@ public class Stats {
 		 * @return
 		 */
 		public long relCPUTime(){
-			return mRelUserTime + mRelSysTime + mRelIdleTime + mRelIOWaitTime + mRelIRQTime + mRelSoftIRQTime;
+			return mRelCPUTime;
 		}
 	}
 	
@@ -193,6 +195,7 @@ public class Stats {
 		long speedTime = 0;
 		for(int i = 0; i < mSysStat.mCpuSpeedStepTimes; i++){
 			speedTime += mSysStat.mRelCpuSpeedTimes[i];
+			msg.append("step time").append(i).append(":").append(mSysStat.mRelCpuSpeedTimes[i]).append("\r\n");
 		}
 		msg.append("speed step time: ").append(speedTime).append(" speed 0:(").append(mSysStat.mRelCpuSpeedTimes[0]).append(") jiffies(10ms)\r\n");		
 		
@@ -203,8 +206,6 @@ public class Stats {
 		msg.append("pids cpu time: ").append(pidtimes).append(" jiffies(10ms)\r\n");
 		//the summation of pids cpu time is a little larger than (user + sys) time.
 		//the summation of speed step time is close to interval
-		
-		msg.append("\r\n");
 		Log.i("Bugu", msg.toString());
 	}
 }

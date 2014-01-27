@@ -24,13 +24,9 @@ import java.io.FileWriter;
 import java.util.Map;
 
 import android.hardware.SensorManager;
-import android.os.BatteryStats;
-import android.os.BatteryStats.Uid;
 import android.telephony.SignalStrength;
 import android.util.Log;
 import android.util.SparseArray;
-
-import com.android.internal.os.BatteryStatsImpl;
 import com.android.internal.os.PowerProfile;
 
 import edu.wayne.cs.bugu.proc.Stats;
@@ -39,21 +35,19 @@ public class PowerModel {
 	private PowerProfile powerProfile;
     private int speedSteps;
     private double[] speedStepAvgPower;
-    private int statsType;
     private AppPowerInfo appPowerInfo;
     private DevicePowerInfo devicePowerInfo;
     public static final double IO_READ_POWER_PER_BYTE = 0.092; // mJ/kb
     public static final double IO_WRITE_POWER_PER_BYTE = 0.564; //mJ/kb
     
-	public PowerModel(PowerProfile profile, int statsType)
+	public PowerModel(PowerProfile profile)
 	{
 		powerProfile = profile;
-		this.statsType = statsType;
 		//Get CPU speed step info
 	    speedSteps = powerProfile.getNumSpeedSteps();
 	    speedStepAvgPower = new double[speedSteps];
 	    for (int p = 0; p < speedSteps; p++) {
-	    	speedStepAvgPower[p] = powerProfile.getAveragePower(PowerProfile.POWER_CPU_ACTIVE, p);// milli watt
+	    	speedStepAvgPower[p] = powerProfile.getAveragePower(PowerProfile.POWER_CPU_ACTIVE, p);// mA
 	    }   
 	}
 	
@@ -74,7 +68,7 @@ public class PowerModel {
 				appPower.append(ps.uid, api);
 			}
 			
-			calculateProcessPower(ps, devPower, api);
+			calculateProcessPower(ps, st.mSysStat, devPower, api);
 		}
 	}
 	
@@ -84,20 +78,19 @@ public class PowerModel {
 	 * @param dpi
 	 * @param api
 	 */
-	private void calculateProcessPower(Stats.PidStat ps, DevicePowerInfo dpi, AppPowerInfo api){
+	private void calculateProcessPower(Stats.PidStat ps, Stats.SystemStat ss, DevicePowerInfo dpi, AppPowerInfo api){
 		//cpu
-		api.cpuPower += dpi.cpuPower * (ps.mRelCPUTime * 1.0/dpi.cpuTime);
+		api.cpuPower += dpi.cpuPower * (ps.mRelCPUTime * 1.0/ss.relCPUTime());
 		//TODO how to handle application wakelock power
 	}
 	
 	private void cpuPower(Stats st){
 		double eng = 0;
-		for(int i = 0; i < st.mSysStat.mCpuSpeedStepTimes; i++){
+		for(int i = 0; i < speedSteps; i++){
 			eng += (st.mSysStat.mRelCpuSpeedTimes[i] * speedStepAvgPower[i]);
 		}
 		
 		devicePowerInfo.cpuPower = (eng/st.mRelTime);
-		devicePowerInfo.cpuTime = st.mSysStat.relCPUTime();
 		//TODO base cpu power?
 	}
 	
@@ -169,89 +162,89 @@ public class PowerModel {
 //        appPowerInfo.speedStepTime += totalTimeAtSpeeds;
 //    }
 	
-	public void appIOPower(SparseArray<? extends Uid.Pid> pidStats)
-	{
-//		Log.i("pTopA: ", "Pid amount -- " + pidStats.size());
-        //each Uid may includes multiple process
-        if (pidStats.size() > 0) {
-            for (int j=0; j<pidStats.size(); j++) {
-                try{
-                	Log.i("pTopA: ", "entry key -- " + pidStats.keyAt(j));
-                	processIOPower(readProcessIOInfo(Integer.valueOf(pidStats.keyAt(j))));
-                }catch(Exception ex){}
-            }
-        }
-        
-        devicePowerInfo.ioPower += appPowerInfo.ioPower;
-	}
+//	public void appIOPower(SparseArray<? extends Uid.Pid> pidStats)
+//	{
+////		Log.i("pTopA: ", "Pid amount -- " + pidStats.size());
+//        //each Uid may includes multiple process
+//        if (pidStats.size() > 0) {
+//            for (int j=0; j<pidStats.size(); j++) {
+//                try{
+//                	Log.i("pTopA: ", "entry key -- " + pidStats.keyAt(j));
+//                	processIOPower(readProcessIOInfo(Integer.valueOf(pidStats.keyAt(j))));
+//                }catch(Exception ex){}
+//            }
+//        }
+//        
+//        devicePowerInfo.ioPower += appPowerInfo.ioPower;
+//	}
 	
-	private void processIOPower(long[] iobytes)
-	{
-	    long write = iobytes[1] - iobytes[2];
-	    if(write < 0) write = 0;
-	    appPowerInfo.ioPower += ((IO_READ_POWER_PER_BYTE * iobytes[0] + IO_WRITE_POWER_PER_BYTE * write)) / 1024; //mJ
-	    appPowerInfo.bytesRead += iobytes[0];
-	    appPowerInfo.bytesWrite += write;
-	}
+//	private void processIOPower(long[] iobytes)
+//	{
+//	    long write = iobytes[1] - iobytes[2];
+//	    if(write < 0) write = 0;
+//	    appPowerInfo.ioPower += ((IO_READ_POWER_PER_BYTE * iobytes[0] + IO_WRITE_POWER_PER_BYTE * write)) / 1024; //mJ
+//	    appPowerInfo.bytesRead += iobytes[0];
+//	    appPowerInfo.bytesWrite += write;
+//	}
 	
-	public void appWakelockPower(Map<String, ? extends BatteryStats.Uid.Wakelock> wakelockStats, long uSecTime)
-	{
-        // Process wake lock usage
-        for (Map.Entry<String, ? extends BatteryStats.Uid.Wakelock> wakelockEntry
-                : wakelockStats.entrySet()) {
-            Uid.Wakelock wakelock = wakelockEntry.getValue();
-            BatteryStats.Timer timer = wakelock.getWakeTime(BatteryStats.WAKE_TYPE_PARTIAL);
-            if (timer != null) {
-            	appPowerInfo.wakelockTime += timer.getTotalTimeLocked(uSecTime, statsType);
-            }
-        }
-        
-        appPowerInfo.wakelockTime /= 1000; // convert to millis
-        appPowerInfo.wakelockPower = (appPowerInfo.wakelockTime * 
-        			powerProfile.getAveragePower(PowerProfile.POWER_CPU_AWAKE)) / 1000;	//milli joule	
-//        devicePowerInfo.cpuPower += appPowerInfo.wakelockPower;
-	}
+//	public void appWakelockPower(Map<String, ? extends BatteryStats.Uid.Wakelock> wakelockStats, long uSecTime)
+//	{
+//        // Process wake lock usage
+//        for (Map.Entry<String, ? extends BatteryStats.Uid.Wakelock> wakelockEntry
+//                : wakelockStats.entrySet()) {
+//            Uid.Wakelock wakelock = wakelockEntry.getValue();
+//            BatteryStats.Timer timer = wakelock.getWakeTime(BatteryStats.WAKE_TYPE_PARTIAL);
+//            if (timer != null) {
+//            	appPowerInfo.wakelockTime += timer.getTotalTimeLocked(uSecTime, statsType);
+//            }
+//        }
+//        
+//        appPowerInfo.wakelockTime /= 1000; // convert to millis
+//        appPowerInfo.wakelockPower = (appPowerInfo.wakelockTime * 
+//        			powerProfile.getAveragePower(PowerProfile.POWER_CPU_AWAKE)) / 1000;	//milli joule	
+////        devicePowerInfo.cpuPower += appPowerInfo.wakelockPower;
+//	}
 	
-	public void appNetworkPower(long received, long sent, long wifiRunTime, double wifiPowerPerKB)
-	{
-	    Log.i("PowerModel",  appPowerInfo.name + "Received: " + received + " sent: " + sent+ " wifiRunTime: " + wifiRunTime + " wifiPowerPerKB:" + wifiPowerPerKB);
-		appPowerInfo.tcpBytesSent = sent;
-		appPowerInfo.tcpBytesReceived = received;
-		appPowerInfo.dataTransRecvPower = (received + sent) * wifiPowerPerKB / 1024; 
-
-		appPowerInfo.wifiRunTime = wifiRunTime /1000.0;
-		appPowerInfo.wifiRunPower =  (wifiRunTime * powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ON)) / 1000;	
-
-		devicePowerInfo.wifiPower += (appPowerInfo.dataTransRecvPower + appPowerInfo.wifiRunPower);
-	}
+//	public void appNetworkPower(long received, long sent, long wifiRunTime, double wifiPowerPerKB)
+//	{
+//	    Log.i("PowerModel",  appPowerInfo.name + "Received: " + received + " sent: " + sent+ " wifiRunTime: " + wifiRunTime + " wifiPowerPerKB:" + wifiPowerPerKB);
+//		appPowerInfo.tcpBytesSent = sent;
+//		appPowerInfo.tcpBytesReceived = received;
+//		appPowerInfo.dataTransRecvPower = (received + sent) * wifiPowerPerKB / 1024; 
+//
+//		appPowerInfo.wifiRunTime = wifiRunTime /1000.0;
+//		appPowerInfo.wifiRunPower =  (wifiRunTime * powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ON)) / 1000;	
+//
+//		devicePowerInfo.wifiPower += (appPowerInfo.dataTransRecvPower + appPowerInfo.wifiRunPower);
+//	}
 	
-	public void appSensorPower(Map<Integer, ? extends BatteryStats.Uid.Sensor> sensorStats, long uSecTime, SensorManager sensorManager)
-	{
-        for (Map.Entry<Integer, ? extends BatteryStats.Uid.Sensor> sensorEntry
-                : sensorStats.entrySet()) {
-            Uid.Sensor sensor = sensorEntry.getValue();
-            int sensorType = sensor.getHandle();
-            BatteryStats.Timer timer = sensor.getSensorTime();
-            double sensorTime = timer.getTotalTimeLocked(uSecTime, statsType) / 1000.0; //ms
-            double multiplier = 0;
-            switch (sensorType) {
-                case Uid.Sensor.GPS:
-                    multiplier = powerProfile.getAveragePower(PowerProfile.POWER_GPS_ON);
-                    appPowerInfo.gpsTime = sensorTime;
-                    appPowerInfo.gpsPower += (multiplier * sensorTime) / 1000;
-                    devicePowerInfo.gpsPower += appPowerInfo.gpsPower;
-                    break;
-                default:
-                    android.hardware.Sensor sensorData =
-                            sensorManager.getDefaultSensor(sensorType);
-                    if (sensorData != null) {
-                        multiplier = sensorData.getPower();
-                        appPowerInfo.otherSensorPower += (multiplier * sensorTime) / 1000;
-                        devicePowerInfo.sensorPower += appPowerInfo.otherSensorPower;
-                    }
-            }
-        }		
-	}
+//	public void appSensorPower(Map<Integer, ? extends BatteryStats.Uid.Sensor> sensorStats, long uSecTime, SensorManager sensorManager)
+//	{
+//        for (Map.Entry<Integer, ? extends BatteryStats.Uid.Sensor> sensorEntry
+//                : sensorStats.entrySet()) {
+//            Uid.Sensor sensor = sensorEntry.getValue();
+//            int sensorType = sensor.getHandle();
+//            BatteryStats.Timer timer = sensor.getSensorTime();
+//            double sensorTime = timer.getTotalTimeLocked(uSecTime, statsType) / 1000.0; //ms
+//            double multiplier = 0;
+//            switch (sensorType) {
+//                case Uid.Sensor.GPS:
+//                    multiplier = powerProfile.getAveragePower(PowerProfile.POWER_GPS_ON);
+//                    appPowerInfo.gpsTime = sensorTime;
+//                    appPowerInfo.gpsPower += (multiplier * sensorTime) / 1000;
+//                    devicePowerInfo.gpsPower += appPowerInfo.gpsPower;
+//                    break;
+//                default:
+//                    android.hardware.Sensor sensorData =
+//                            sensorManager.getDefaultSensor(sensorType);
+//                    if (sensorData != null) {
+//                        multiplier = sensorData.getPower();
+//                        appPowerInfo.otherSensorPower += (multiplier * sensorTime) / 1000;
+//                        devicePowerInfo.sensorPower += appPowerInfo.otherSensorPower;
+//                    }
+//            }
+//        }		
+//	}
 	
 	public void appMediaPower(long audioOnTime, long videoOnTime)
 	{
@@ -264,12 +257,12 @@ public class PowerModel {
         devicePowerInfo.dspPower = appPowerInfo.audioPower + appPowerInfo.videoPower;
 	}
 	
-	public void phonePower(long phoneOnTime)
-	{
-        devicePowerInfo.phonePower = powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ACTIVE)
-                              * phoneOnTime /1000 / 1000; //mJ
-        devicePowerInfo.phoneOnTime = phoneOnTime /1000.0;
-	}
+//	public void phonePower(long phoneOnTime)
+//	{
+//        devicePowerInfo.phonePower = powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ACTIVE)
+//                              * phoneOnTime /1000 / 1000; //mJ
+//        devicePowerInfo.phoneOnTime = phoneOnTime /1000.0;
+//	}
 	
 //	public void screenPower(BatteryStatsImpl batteryStats, long uSecTime)
 //	{
@@ -287,50 +280,50 @@ public class PowerModel {
 //        }
 //	}
 	
-	public void radioPower(BatteryStatsImpl batteryStats, long uSecTime)
-	{
-	    //android 3.1
-//        int BINS = BatteryStats.NUM_SIGNAL_STRENGTH_BINS;
-        //android 4
-	    double signalTime = 0;
-        int BINS = SignalStrength.NUM_SIGNAL_STRENGTH_BINS;
-        for (int i = 0; i < BINS; i++) {
-            double strengthTimeMs = batteryStats.getPhoneSignalStrengthTime(i, uSecTime, statsType) / 1000.0;
-            signalTime += strengthTimeMs;
-            devicePowerInfo.radioPower += (strengthTimeMs / 1000
-                    * powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ON, i));
-        }
-        
-        double scanningTimeMs = batteryStats.getPhoneSignalScanningTime(uSecTime, statsType) / 1000.0;
-        devicePowerInfo.radioPower += (scanningTimeMs * powerProfile.getAveragePower(PowerProfile.POWER_RADIO_SCANNING) / 1000);	
-        devicePowerInfo.signalTime = signalTime;
-        devicePowerInfo.scanTime = scanningTimeMs;
-	}
+//	public void radioPower(BatteryStatsImpl batteryStats, long uSecTime)
+//	{
+//	    //android 3.1
+////        int BINS = BatteryStats.NUM_SIGNAL_STRENGTH_BINS;
+//        //android 4
+//	    double signalTime = 0;
+//        int BINS = SignalStrength.NUM_SIGNAL_STRENGTH_BINS;
+//        for (int i = 0; i < BINS; i++) {
+//            double strengthTimeMs = batteryStats.getPhoneSignalStrengthTime(i, uSecTime, statsType) / 1000.0;
+//            signalTime += strengthTimeMs;
+//            devicePowerInfo.radioPower += (strengthTimeMs / 1000
+//                    * powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ON, i));
+//        }
+//        
+//        double scanningTimeMs = batteryStats.getPhoneSignalScanningTime(uSecTime, statsType) / 1000.0;
+//        devicePowerInfo.radioPower += (scanningTimeMs * powerProfile.getAveragePower(PowerProfile.POWER_RADIO_SCANNING) / 1000);	
+//        devicePowerInfo.signalTime = signalTime;
+//        devicePowerInfo.scanTime = scanningTimeMs;
+//	}
 	
-	public void wifiPower(long wifiOnTime, long wifiRunTime)
-	{
-//        log("DEV--- wifiOnTime: " + wifiOnTime+ " wifiRunTime: " + wifiRunTime);	    
-	    devicePowerInfo.wifiOnTime = wifiOnTime / 1000.0;//ms
-	    devicePowerInfo.wifiRunTime = wifiRunTime / 1000.0;
-        devicePowerInfo.wifiPower += (wifiOnTime /1000.0 * powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ON)
-                                    + wifiRunTime /1000.0 * powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ACTIVE)) / 1000;//mJ	
-	}
-	
-	public void idlePower(long idleTime)
-	{
-//        log("DEV--- idleTime: " + idleTime);	    
-	    devicePowerInfo.idleTime = idleTime / 1000.0;//ms
-        devicePowerInfo.idlePower = (idleTime / 1000.0 * powerProfile.getAveragePower(PowerProfile.POWER_CPU_IDLE))
-               / 1000;		
-	}
-	
-	public void bluetoothPower(long btOnTime, int btPingCount)
-	{	    
-	    devicePowerInfo.bluetoothOnTime = btOnTime / 1000.0;//ms
-        devicePowerInfo.buletoothPower += (btOnTime /1000.0 * powerProfile.getAveragePower(PowerProfile.POWER_BLUETOOTH_ON) / 1000);
-        devicePowerInfo.buletoothPower += (btPingCount
-                * powerProfile.getAveragePower(PowerProfile.POWER_BLUETOOTH_AT_CMD)) / 1000;		
-	}
+//	public void wifiPower(long wifiOnTime, long wifiRunTime)
+//	{
+////        log("DEV--- wifiOnTime: " + wifiOnTime+ " wifiRunTime: " + wifiRunTime);	    
+//	    devicePowerInfo.wifiOnTime = wifiOnTime / 1000.0;//ms
+//	    devicePowerInfo.wifiRunTime = wifiRunTime / 1000.0;
+//        devicePowerInfo.wifiPower += (wifiOnTime /1000.0 * powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ON)
+//                                    + wifiRunTime /1000.0 * powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ACTIVE)) / 1000;//mJ	
+//	}
+//	
+//	public void idlePower(long idleTime)
+//	{
+////        log("DEV--- idleTime: " + idleTime);	    
+//	    devicePowerInfo.idleTime = idleTime / 1000.0;//ms
+//        devicePowerInfo.idlePower = (idleTime / 1000.0 * powerProfile.getAveragePower(PowerProfile.POWER_CPU_IDLE))
+//               / 1000;		
+//	}
+//	
+//	public void bluetoothPower(long btOnTime, int btPingCount)
+//	{	    
+//	    devicePowerInfo.bluetoothOnTime = btOnTime / 1000.0;//ms
+//        devicePowerInfo.buletoothPower += (btOnTime /1000.0 * powerProfile.getAveragePower(PowerProfile.POWER_BLUETOOTH_ON) / 1000);
+//        devicePowerInfo.buletoothPower += (btPingCount
+//                * powerProfile.getAveragePower(PowerProfile.POWER_BLUETOOTH_AT_CMD)) / 1000;		
+//	}
 	
     private long[] readProcessIOInfo(int pid)
     {
