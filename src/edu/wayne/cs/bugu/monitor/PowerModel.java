@@ -31,15 +31,18 @@ import android.util.SparseArray;
 import com.android.internal.os.PowerProfile;
 
 import edu.wayne.cs.bugu.proc.Stats;
+import edu.wayne.cs.bugu.util.NativeLib;
 // the unit of power is mA
 public class PowerModel {
 	private PowerProfile powerProfile;
+	private NativeLib natLib = new NativeLib();
     private int speedSteps;
     private double[] speedStepAvgPower;
     private AppPowerInfo appPowerInfo;
     private DevicePowerInfo devicePowerInfo;
     public static final double IO_READ_POWER_PER_BYTE = 0.092; // mJ/kb
     public static final double IO_WRITE_POWER_PER_BYTE = 0.564; //mJ/kb
+    private long pageSize = 0;
     
 	public PowerModel(PowerProfile profile)
 	{
@@ -52,6 +55,7 @@ public class PowerModel {
 	    }   
 	    //on some platform (such as galaxy s4), this may in reverse order
 	    Arrays.sort(speedStepAvgPower);
+	    pageSize = natLib.getPageSize();
 	}
 	
 	public void calculatePower(Stats st, DevicePowerInfo devPower, SparseArray<AppPowerInfo> appPower){

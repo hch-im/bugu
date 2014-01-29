@@ -42,4 +42,10 @@ public class NativeLib {
 	 * @return
 	 */
 	public native long getCPUIOWaitTime(int cpuNum);	
+	
+	/**
+	 * return the page size.
+	 * @return
+	 */
+	public native long getPageSize();
 }

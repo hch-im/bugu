@@ -23,6 +23,14 @@ JNIEXPORT jlong JNICALL Java_edu_wayne_cs_bugu_util_NativeLib_getCPUIdleTime
 JNIEXPORT jlong JNICALL Java_edu_wayne_cs_bugu_util_NativeLib_getCPUIOWaitTime
   (JNIEnv *, jobject, jint);
 
+/*
+ * Class:     edu_wayne_cs_bugu_util_NativeLib
+ * Method:    getPageSize
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_edu_wayne_cs_bugu_util_NativeLib_getPageSize
+  (JNIEnv *, jobject);
+
 #ifdef __cplusplus
 }
 #endif

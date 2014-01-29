@@ -19,6 +19,8 @@
  */
 #include <stdlib.h>
 #include <linux/tick.h>
+#include <unistd.h>
+
 #include "edu_wayne_cs_bugu_util_NativeLib.h"
 
 /*
@@ -53,4 +55,14 @@ JNIEXPORT jlong JNICALL Java_edu_wayne_cs_bugu_util_NativeLib_getCPUIOWaitTime
 	}
 
 	return iowaittime;
+}
+
+/*
+ * Class:     edu_wayne_cs_bugu_util_NativeLib
+ * Method:    getPageSize
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_edu_wayne_cs_bugu_util_NativeLib_getPageSize
+  (JNIEnv * env, jobject obj){
+	return getpagesize();
 }
