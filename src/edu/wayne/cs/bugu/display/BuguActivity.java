@@ -27,8 +27,7 @@ import java.sql.Timestamp;
 import edu.wayne.cs.bugu.db.RecordDAO;
 import edu.wayne.cs.bugu.db.SqliteHelper;
 import edu.wayne.cs.bugu.db.model.Record;
-import edu.wayne.cs.bugu.monitor.Event;
-import edu.wayne.cs.bugu.monitor.PtopaReceiver;
+import edu.wayne.cs.bugu.monitor.BuguReceiver;
 import edu.wayne.cs.bugu.monitor.PowerProfilingService;
 import edu.wayne.cs.bugu.R;
 
@@ -45,20 +44,9 @@ import android.widget.Button;
 public class BuguActivity extends Activity implements OnClickListener{
     private int period=1000;
 	private PowerProfilingService ptopaService = null;
-    private PtopaReceiver receiver = null;
-    private Handler eventHandler = new Handler();
-    private boolean state = false;
     private FileWriter writer = null;
     private RecordDAO rdao = new RecordDAO();    
     private Record lastRecord;
-    
-    private Runnable eventPeriodicTask = new Runnable() {
-        public void run() {
-            logEvent();
-            if(state)
-                eventHandler.postDelayed(eventPeriodicTask, period);
-        }
-    };    
     
     /** Called when the activity is first created. */
     @Override
@@ -84,15 +72,7 @@ public class BuguActivity extends Activity implements OnClickListener{
     }
     
     @Override
-    protected void onDestroy() {
-        if(state){
-            unregisterReceiver(receiver);        
-        }
-        
-        if(receiver != null)
-        {
-            receiver.writeLog();    
-        }
+    protected void onDestroy() {        
         if(writer != null)
         {
             try{
@@ -143,20 +123,14 @@ public class BuguActivity extends Activity implements OnClickListener{
     private boolean startMonitor()
     {
         initWrite();
-        initReceiver();
         if(writer == null) return false;
-        receiver.reset(writer);
-        ptopaService.startMonitor(writer, period);
-//        eventHandler.postDelayed(eventPeriodicTask, period);
-//        state = true;        
+        ptopaService.startMonitor(writer, period);        
         
         return true;
     }
     
     private void stopMonitor()
     {
-        unregisterReceiver(receiver);
-        receiver.writeLog();
         if(writer != null){
             try{writer.close();}catch(Exception ex){}
         }
@@ -167,7 +141,6 @@ public class BuguActivity extends Activity implements OnClickListener{
             rdao.update(lastRecord);
         }
         ptopaService.stopMonitor();
-        state = false;
     }
     
     private void initWrite()
@@ -202,47 +175,5 @@ public class BuguActivity extends Activity implements OnClickListener{
         } catch (IOException e) {
             e.printStackTrace();
         }        
-    }
-    
-    private void logEvent()
-    {
-        receiver.writeLog();
-    }
-    
-    private void initReceiver()
-    {
-        if(receiver == null)
-        receiver = new PtopaReceiver();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Event.INT_BLUETOOTH_OFF);
-        filter.addAction(Event.INT_BLUETOOTH_ON);
-        filter.addAction(Event.INT_FULL_WIFILOCK_ACQUIRED);
-        filter.addAction(Event.INT_FULL_WIFILOCK_RELEASED);
-        filter.addAction(Event.INT_NETWORK_INTERFACE_TYPE);
-        filter.addAction(Event.INT_PHONE_OFF);
-        filter.addAction(Event.INT_PHONE_ON);
-        filter.addAction(Event.INT_SCAN_WIFILOCK_ACQUIRED);
-        filter.addAction(Event.INT_FULL_WIFILOCK_RELEASED);
-        filter.addAction(Event.INT_SCREEN_BRIGHTNESS);
-        filter.addAction(Event.INT_SCREEN_OFF);
-        filter.addAction(Event.INT_SCREEN_ON);
-        
-        filter.addAction(Event.INT_START_AUDIO);
-        filter.addAction(Event.INT_START_GPS);
-        filter.addAction(Event.INT_START_SENSOR);
-        filter.addAction(Event.INT_START_VIDEO);
-        filter.addAction(Event.INT_START_WAKELOCK);
-
-        filter.addAction(Event.INT_STOP_AUDIO);
-        filter.addAction(Event.INT_STOP_GPS);
-        filter.addAction(Event.INT_STOP_SENSOR);
-        filter.addAction(Event.INT_STOP_VIDEO);
-        filter.addAction(Event.INT_STOP_WAKELOCK);        
-        
-        filter.addAction(Event.INT_WIFI_OFF);
-        filter.addAction(Event.INT_WIFI_ON);
-        filter.addAction(Event.INT_WIFIMULTICAST_DISABLED);
-        filter.addAction(Event.INT_WIFIMULTICAST_ENABLED);
-        registerReceiver(receiver, filter);
-    }    
+    }  
 }

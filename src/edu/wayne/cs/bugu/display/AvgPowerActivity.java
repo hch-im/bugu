@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import edu.wayne.cs.bugu.analyzer.PowerAnalyzer;
 import edu.wayne.cs.bugu.db.model.Record;
 import edu.wayne.cs.bugu.R;
 import android.app.AlertDialog;
@@ -34,7 +33,6 @@ public class AvgPowerActivity extends LauncherActivity {
     protected void onCreate(Bundle args) {
         super.onCreate(args);
         filename = (String)getIntent().getExtra(RecordActivity.EXTRA_FILENAME);
-        prepareData();
     }
 
     @Override
@@ -68,58 +66,6 @@ public class AvgPowerActivity extends LauncherActivity {
                 startActivity(i);
                 break;
         }
-    }
-    
-    private void prepareData()
-    {
-        try {
-            File root = Environment.getExternalStorageDirectory();
-            File ptopa = new File(root, "ptopa/data/powerresult_" + filename);
-            if(ptopa.exists() == false) { 
-                PowerAnalyzer.analyze(filename);
-                if(ptopa.exists() == false) return;
-            }
-            String s = null; String last = null; 
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-              new FileInputStream(ptopa)));
-            s = br.readLine(); 
-            if(s == null) return;
-            String[] tstrs = s.split(",");
-            
-            while ((s = br.readLine()) != null) {
-                //do nothing
-                last = s;
-            }
-            
-            if(last == null) return;
-            
-            DecimalFormatSymbols decimalFormatSymbols = new DecimalFormatSymbols();
-            decimalFormatSymbols.setDecimalSeparator('.');
-            DecimalFormat decimalFormat = new DecimalFormat("###0.0000", decimalFormatSymbols);
-            String[] strs = last.split(",");
-            list = new ArrayList<Map<String, String>>();
-            for(int i = 1 ; i < strs.length; i++)
-            {
-                String val = "";
-                if(strs[i].indexOf("/") > 0)
-                {
-                    double pv = Double.valueOf(strs[i].substring(0, strs[i].indexOf("/")));
-                    val = decimalFormat.format(pv) + " mw";
-                }
-                else
-                {
-                    val = "0 mw";
-                }
-                
-                list.add(putData(tstrs[i], val));
-            }
-            String[] from = { "Application", "Power" };
-            int[] to = { android.R.id.text1, android.R.id.text2 };
-
-            SimpleAdapter adapter = new SimpleAdapter(this, list,
-                    android.R.layout.simple_list_item_2, from, to);
-            setListAdapter(adapter);
-        }catch(Exception ex){}
     }
     
     private HashMap<String, String> putData(String name, String purpose) {

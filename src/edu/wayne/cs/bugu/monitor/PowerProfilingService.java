@@ -19,42 +19,19 @@
  */
 package edu.wayne.cs.bugu.monitor;
 import java.io.FileWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Vector;
 
-import com.android.internal.os.BatteryStatsImpl;
 import com.android.internal.os.PowerProfile;
-import com.android.internal.os.ProcessStats;
-import com.android.internal.app.IBatteryStats;
 
-import edu.wayne.cs.bugu.db.ConfigDAO;
-import edu.wayne.cs.bugu.db.model.Config;
 import edu.wayne.cs.bugu.display.BuguActivity;
 import edu.wayne.cs.bugu.proc.ProcFileParser;
 import edu.wayne.cs.bugu.proc.Stats;
 
 import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.res.Configuration;
-import android.hardware.SensorManager;
-import android.os.BatteryStats;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Parcel;
-import android.os.Process;
-import android.os.RemoteException;
-import android.os.ServiceManager;
-import android.os.SystemClock;
-import android.os.BatteryStats.Uid;
-import android.provider.Settings;
-import android.provider.Settings.SettingNotFoundException;
-import android.util.Log;
 import android.util.SparseArray;
 /**
  * @author hchen
@@ -73,12 +50,10 @@ public class PowerProfilingService extends Service{
     private PowerModel powerModel = null;    
     private SparseArray<AppPowerInfo> curAppPower = null;
     private DevicePowerInfo curDevicePower = null;    
-    private ConfigDAO cdao = null;
     	
     public PowerProfilingService(BuguActivity activity){
     	mainActivity = activity;
     	stats = new Stats();
-    	cdao = new ConfigDAO();
     	procParser = new ProcFileParser();
     	powerHandler = new Handler();
     	powerPeriodicTask = new Runnable() {

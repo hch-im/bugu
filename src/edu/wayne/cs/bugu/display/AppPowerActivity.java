@@ -5,8 +5,6 @@ import java.text.DecimalFormat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import edu.wayne.cs.bugu.rest.BuguService;
-import edu.wayne.cs.bugu.rest.BuguServiceImpl;
 import edu.wayne.cs.bugu.R;
 import android.app.Activity;
 import android.app.ProgressDialog;
@@ -28,7 +26,6 @@ import android.widget.TableRow;
 import android.widget.TextView;
 
 public class AppPowerActivity extends Activity{
-    private BuguService service = new BuguServiceImpl();
     private TableLayout table = null;
     private Spinner spinner = null;
     private Spinner devSpinner = null;    
@@ -120,8 +117,6 @@ public class AppPowerActivity extends Activity{
         
         int type = spinner.getSelectedItemPosition();
         pDialog.show();
-        Thread t = new SearchThread(dev, type, offset);
-        t.start();
     }
     private CharSequence[] getAppTypeArray()
     {
@@ -143,8 +138,6 @@ public class AppPowerActivity extends Activity{
     public void initDeviceList()
     {
         pDialog.show();
-        UpdateDevicesThread t = new UpdateDevicesThread();
-        t.start();
     }
     
     public void updateDeviceList(JSONArray objs)
@@ -168,13 +161,6 @@ public class AppPowerActivity extends Activity{
                 android.R.layout.simple_spinner_item, array);
         adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         devSpinner.setAdapter(adapter2);
-    }
-    
-    private JSONArray load(int dev, int type, int offset)
-    {
-        JSONArray objs = service.getApplications(dev, type - 1, textField.getText().toString().trim(), offset, numperpage);
-        if(objs == null) return null;
-        return objs;
     }
     
     public void displayResult(int offset, JSONArray objs){
@@ -245,52 +231,4 @@ public class AppPowerActivity extends Activity{
         int count = table.getChildCount();
         table.removeViews(1, count - 1);
     }
-    
-    class SearchThread extends Thread
-    {
-        public SearchThread(int dev, int type, int offset)
-        {
-            this.offset = offset;
-            this.dev = dev;
-            this.type = type;
-        }
-        
-        int offset;
-        int dev;
-        int type;
-        JSONArray objs;
-        @Override
-        public void run() {         
-            objs = load(dev, type, offset);
-            handler.sendEmptyMessage(0);
-        }
-
-        private Handler handler = new Handler() {
-
-            @Override
-            public void handleMessage(Message msg) {
-                displayResult(offset, objs);
-                pDialog.dismiss();
-            }
-        };        
-    }
-    
-    class UpdateDevicesThread extends Thread
-    {
-        JSONArray objs;
-        @Override
-        public void run() {         
-            objs = service.getDevices();;
-            handler.sendEmptyMessage(0);
-        }
-
-        private Handler handler = new Handler() {
-
-            @Override
-            public void handleMessage(Message msg) {
-                updateDeviceList(objs);
-                pDialog.dismiss();
-            }
-        };        
-    }    
 }

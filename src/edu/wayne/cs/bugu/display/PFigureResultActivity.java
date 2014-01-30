@@ -25,7 +25,6 @@ import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYStepMode;
 import com.androidplot.xy.YLayoutStyle;
 
-import edu.wayne.cs.bugu.analyzer.PowerAnalyzer;
 import edu.wayne.cs.bugu.R;
 import android.app.Activity;
 import android.graphics.Color;
@@ -52,93 +51,86 @@ public class PFigureResultActivity extends Activity implements OnClickListener{
     
     private void preparePowerView()
     {
-        boolean title = true;
-        
-        DecimalFormatSymbols decimalFormatSymbols = new DecimalFormatSymbols();
-        decimalFormatSymbols.setDecimalSeparator('.');
-        DecimalFormat decimalFormat = new DecimalFormat("###0.0000", decimalFormatSymbols);
-        Vector<Number> times = new Vector<Number>();
-        Random r = new Random();
-        
-        try {
-            File root = Environment.getExternalStorageDirectory();
-            File ptopa = new File(root, "ptopa/data/powerresult_" + filename);
-            
-            if(ptopa.exists() == false) { 
-                PowerAnalyzer.analyze(filename);
-                if(ptopa.exists() == false) return;
-            }
-           
-            String s = null;  
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-              new FileInputStream(ptopa)));
-            LinkedHashMap<String, Vector<Number>> powerVals = new LinkedHashMap<String, Vector<Number>>();
-            Vector<Number> appPower = null;
-            Vector<String> names = new Vector<String>();
-            String text = null;
-            
-            while ((s = br.readLine()) != null) {   
-                if(s.startsWith("Avg")) continue;
-                
-                String[] strs = s.split(",");
-                //get time
-                if(title == false)
-                {
-                    times.add(new BigInteger(strs[0]));
-                }
-                
-                for (Integer j = 0; j < strs.length; j++) {
-                    if(title && j >0 ){//title and xyseries
-                        appPower = new Vector<Number>();
-                        powerVals.put(strs[j], appPower);
-                        names.add(strs[j]);
-                    }
-                    
-                    if(j > 0)
-                    {
-                        appPower = powerVals.get(names.get(j-1));
-                    }
-                    
-                    if(title || j == 0){//title ad time column
-                    }
-                    else
-                    {
-                        text = decimalFormat.format(Double.valueOf(strs[j]));                        
-                        appPower.add(new BigDecimal(text));
-                    }
-                }//end for
-                
-                if(title) title = false;
-                                
-            }//end while
-            
-            ViewGroup.LayoutParams lp = powerView.getLayoutParams();
-            int width1 = names.size() * 45;
-            int width2 = times.size() * 20;
-            int width = Math.max(width1, width2);
-            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(width, lp.height);
-            powerView.setLayoutParams(layoutParams);
-            initPowerView(names.size());
-            
-            // draw a domain tick for each year:
-            powerView.setDomainStep(XYStepMode.SUBDIVIDE, times.size() > 10 ? 5 : 2);
-            //add series
-            for(int i = 0; i < names.size(); i++)
-            {
-                if(i < 2 || names.get(i).equals("Device"))//the first data usually have problem
-                    continue;
-                
-                XYSeries series = new SimpleXYSeries(
-                        times,
-                        powerVals.get(names.get(i)),
-                        wrapName(names.get(i)));                             // Set the display title of the series                                        
-         
-                // setup our line fill paint to be a slightly transparent gradient:             
-                LineAndPointFormatter formatter  = new LineAndPointFormatter(Color.rgb(r.nextInt(255), r.nextInt(255), r.nextInt(255)), 
-                        Color.rgb(r.nextInt(255), r.nextInt(255), r.nextInt(255)), Color.TRANSPARENT);
-                powerView.addSeries(series, LineAndPointRenderer.class, formatter);                     
-            }            
-        }catch (Exception ex){ex.printStackTrace();}
+//        boolean title = true;
+//        
+//        DecimalFormatSymbols decimalFormatSymbols = new DecimalFormatSymbols();
+//        decimalFormatSymbols.setDecimalSeparator('.');
+//        DecimalFormat decimalFormat = new DecimalFormat("###0.0000", decimalFormatSymbols);
+//        Vector<Number> times = new Vector<Number>();
+//        Random r = new Random();
+//        
+//        try {
+//           
+//            String s = null;  
+//            BufferedReader br = new BufferedReader(new InputStreamReader(
+//              new FileInputStream(ptopa)));
+//            LinkedHashMap<String, Vector<Number>> powerVals = new LinkedHashMap<String, Vector<Number>>();
+//            Vector<Number> appPower = null;
+//            Vector<String> names = new Vector<String>();
+//            String text = null;
+//            
+//            while ((s = br.readLine()) != null) {   
+//                if(s.startsWith("Avg")) continue;
+//                
+//                String[] strs = s.split(",");
+//                //get time
+//                if(title == false)
+//                {
+//                    times.add(new BigInteger(strs[0]));
+//                }
+//                
+//                for (Integer j = 0; j < strs.length; j++) {
+//                    if(title && j >0 ){//title and xyseries
+//                        appPower = new Vector<Number>();
+//                        powerVals.put(strs[j], appPower);
+//                        names.add(strs[j]);
+//                    }
+//                    
+//                    if(j > 0)
+//                    {
+//                        appPower = powerVals.get(names.get(j-1));
+//                    }
+//                    
+//                    if(title || j == 0){//title ad time column
+//                    }
+//                    else
+//                    {
+//                        text = decimalFormat.format(Double.valueOf(strs[j]));                        
+//                        appPower.add(new BigDecimal(text));
+//                    }
+//                }//end for
+//                
+//                if(title) title = false;
+//                                
+//            }//end while
+//            
+//            ViewGroup.LayoutParams lp = powerView.getLayoutParams();
+//            int width1 = names.size() * 45;
+//            int width2 = times.size() * 20;
+//            int width = Math.max(width1, width2);
+//            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(width, lp.height);
+//            powerView.setLayoutParams(layoutParams);
+//            initPowerView(names.size());
+//            
+//            // draw a domain tick for each year:
+//            powerView.setDomainStep(XYStepMode.SUBDIVIDE, times.size() > 10 ? 5 : 2);
+//            //add series
+//            for(int i = 0; i < names.size(); i++)
+//            {
+//                if(i < 2 || names.get(i).equals("Device"))//the first data usually have problem
+//                    continue;
+//                
+//                XYSeries series = new SimpleXYSeries(
+//                        times,
+//                        powerVals.get(names.get(i)),
+//                        wrapName(names.get(i)));                             // Set the display title of the series                                        
+//         
+//                // setup our line fill paint to be a slightly transparent gradient:             
+//                LineAndPointFormatter formatter  = new LineAndPointFormatter(Color.rgb(r.nextInt(255), r.nextInt(255), r.nextInt(255)), 
+//                        Color.rgb(r.nextInt(255), r.nextInt(255), r.nextInt(255)), Color.TRANSPARENT);
+//                powerView.addSeries(series, LineAndPointRenderer.class, formatter);                     
+//            }            
+//        }catch (Exception ex){ex.printStackTrace();}
 
     }
     

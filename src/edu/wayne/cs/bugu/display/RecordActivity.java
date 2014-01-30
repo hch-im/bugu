@@ -11,13 +11,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONArray;
-
-import edu.wayne.cs.bugu.analyzer.PowerAnalyzer;
 import edu.wayne.cs.bugu.db.RecordDAO;
 import edu.wayne.cs.bugu.db.model.Record;
-import edu.wayne.cs.bugu.rest.BuguService;
-import edu.wayne.cs.bugu.rest.BuguServiceImpl;
 import edu.wayne.cs.bugu.R;
 import android.app.AlertDialog;
 import android.app.ListActivity;
@@ -38,7 +33,6 @@ public class RecordActivity extends ListActivity{
     private ArrayList<Record> records;
     private SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yyyy H:mm:ss");
     public static String EXTRA_FILENAME = "edu.wayne.cs.ptop.extra.filename";
-    private BuguService service = new BuguServiceImpl();
     private ProgressDialog pDialog;
     
     @Override
@@ -102,22 +96,13 @@ public class RecordActivity extends ListActivity{
                 startActivity(i);
                 break;
             case 3:
-                i = new Intent(this, EFigureResultActivity.class);
-                i.putExtra(EXTRA_FILENAME, r.getName());
-                startActivity(i);
-                break;
-            case 4:
                 pDialog.show();
-                UploadThread t = new UploadThread(r.getName());
-                t.start();
                 break;   
-            case 5:
+            case 4:
                 if(dao.remove(r.getId())){ 
                     File f = new File(Environment.getExternalStorageDirectory(), "ptopa/data/" + r.getName());
                     if(f.exists()) f.delete();
                     f = new File(Environment.getExternalStorageDirectory(), "ptopa/data/powerresult_" + r.getName());
-                    if(f.exists()) f.delete();
-                    f = new File(Environment.getExternalStorageDirectory(), "ptopa/data/eventresult_" + r.getName());
                     if(f.exists()) f.delete();
                     f = new File(Environment.getExternalStorageDirectory(), "ptopa/data/result_" + r.getName());
                     if(f.exists()) f.delete();                    
@@ -139,78 +124,4 @@ public class RecordActivity extends ListActivity{
         
         setListAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1, results));
     }
-    
-    private void uploadData(String filename)
-    {
-        String model = Build.MODEL;
-//        String product = Build.PRODUCT;
-        
-        File root = Environment.getExternalStorageDirectory();
-        File ptopa = new File(root, "ptopa/data/powerresult_" + filename);
-        if(ptopa.exists() == false) { 
-            PowerAnalyzer.analyze(filename);
-            if(ptopa.exists() == false) return;
-        }
-        String s = null; String last = null; String[] tstrs = null;
-        try{
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-              new FileInputStream(ptopa)));
-            s = br.readLine(); 
-            if(s == null) return;
-            tstrs = s.split(",");
-            
-            while ((s = br.readLine()) != null) {
-                //do nothing
-                last = s;
-            }
-        }catch(Exception ex){}
-        
-        if(last == null) return;
-        
-        DecimalFormatSymbols decimalFormatSymbols = new DecimalFormatSymbols();
-        decimalFormatSymbols.setDecimalSeparator('.');
-        DecimalFormat decimalFormat = new DecimalFormat("###0.0000", decimalFormatSymbols);
-        String[] strs = last.split(",");
-        HashMap<String, String> plist = new HashMap<String, String>();
-        for(int i = 1 ; i < strs.length; i++)
-        {
-            String val = "";
-            if(strs[i].indexOf("/") > 0)
-            {
-                double pv = Double.valueOf(strs[i].substring(0, strs[i].indexOf("/")));
-                val = decimalFormat.format(pv);
-            }
-            else
-            {
-                val = "0";
-            }
-            
-            plist.put(tstrs[i], val);
-        }
-        
-        service.uploadPower(model, plist);
-    } 
-    
-    class UploadThread extends Thread
-    {
-        String filename;
-        public UploadThread(String filename)
-        {
-            this.filename = filename;
-        }
-        @Override
-        public void run() {         
-            uploadData(filename);
-            handler.sendEmptyMessage(0);
-        }
-
-        private Handler handler = new Handler() {
-
-            @Override
-            public void handleMessage(Message msg) {                
-                pDialog.dismiss();
-                showUploadSuccessDialog();
-            }
-        };        
-    }        
 }
