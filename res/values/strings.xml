@@ -14,4 +14,5 @@
 	<string name="figureLabel">Figure</string>
 	<string name="uploadlabel">Upload Data</string>
 	<string name="deletelabel">Delete This Record</string>
+	<string name="PowerProfilingService">Power Profiling Service</string>
 </resources>

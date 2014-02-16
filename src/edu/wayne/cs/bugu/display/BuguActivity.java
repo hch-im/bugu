@@ -27,15 +27,17 @@ import java.sql.Timestamp;
 import edu.wayne.cs.bugu.db.RecordDAO;
 import edu.wayne.cs.bugu.db.SqliteHelper;
 import edu.wayne.cs.bugu.db.model.Record;
-import edu.wayne.cs.bugu.monitor.BuguReceiver;
 import edu.wayne.cs.bugu.monitor.PowerProfilingService;
 import edu.wayne.cs.bugu.R;
 
 import android.app.Activity;
-import android.content.IntentFilter;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -43,10 +45,11 @@ import android.widget.Button;
 
 public class BuguActivity extends Activity implements OnClickListener{
     private int period=1000;
-	private PowerProfilingService ptopaService = null;
+	private PowerProfilingService buguService = null;
     private FileWriter writer = null;
     private RecordDAO rdao = new RecordDAO();    
     private Record lastRecord;
+    private boolean mIsBound = false; //indicate whether we have call bind
     
     /** Called when the activity is first created. */
     @Override
@@ -54,15 +57,21 @@ public class BuguActivity extends Activity implements OnClickListener{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.home);
         initViewListeners();
-        try{
-        	ptopaService = new PowerProfilingService(this);
-        }catch(Exception ex)
-        {
-        	//TODO change service states
-        }
+    	doBindService();            			
     }
-    
-    private void initViewListeners()
+        
+    @Override
+	protected void onPause() {
+    	super.onPause();
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+	}
+
+
+	private void initViewListeners()
     {
         Button exit = (Button)findViewById(R.id.exitButton);
         Button start = (Button)findViewById(R.id.startButton);
@@ -73,6 +82,7 @@ public class BuguActivity extends Activity implements OnClickListener{
     
     @Override
     protected void onDestroy() {        
+        super.onDestroy();
         if(writer != null)
         {
             try{
@@ -87,7 +97,7 @@ public class BuguActivity extends Activity implements OnClickListener{
         }        
         //close database connection
         SqliteHelper.getInstance().close();
-        super.onDestroy();
+		doUnbindService();
     }
 
     @Override
@@ -100,7 +110,7 @@ public class BuguActivity extends Activity implements OnClickListener{
                 break;
             case R.id.startButton:
                 Button start = (Button)view;
-                if(ptopaService.currentState() == false)//not running
+                if(buguService != null && buguService.currentState() == false)//not running
                 {
                     if(startMonitor() == true)
                         start.setText(R.string.stopButton);
@@ -124,9 +134,12 @@ public class BuguActivity extends Activity implements OnClickListener{
     {
         initWrite();
         if(writer == null) return false;
-        ptopaService.startMonitor(writer, period);        
+        if(buguService != null){
+        	buguService.startMonitor(writer, period, this);        
+        	return true;
+        }
         
-        return true;
+        return false;
     }
     
     private void stopMonitor()
@@ -140,19 +153,21 @@ public class BuguActivity extends Activity implements OnClickListener{
             lastRecord.setState(1);
             rdao.update(lastRecord);
         }
-        ptopaService.stopMonitor();
+        
+        if(buguService != null)
+        	buguService.stopMonitor();
     }
     
     private void initWrite()
     {
         try {
             File root = Environment.getExternalStorageDirectory();
-            File ptopa = new File(root, "ptopa/data");
+            File ptopa = new File(root, "bugu/data");
             if(ptopa.exists() == false) { 
-                ptopa.mkdir();
+                if(!ptopa.mkdir()) return;
             }
             
-            String fileName = System.currentTimeMillis()+"ptoppower.txt";
+            String fileName = System.currentTimeMillis()+"powerlog.txt";
             File ptopfile = new File(ptopa, fileName);
             if(ptopfile.exists())
             {
@@ -176,4 +191,32 @@ public class BuguActivity extends Activity implements OnClickListener{
             e.printStackTrace();
         }        
     }  
+    
+    private void doBindService() {
+    	getApplicationContext().bindService(new Intent(BuguActivity.this, 
+        		PowerProfilingService.class), mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    private void doUnbindService() {
+        if (mIsBound) {
+            // Detach our existing connection.
+        	getApplicationContext().unbindService(mConnection);
+        	mIsBound = false;
+        }
+    }
+    
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        public void onServiceConnected(ComponentName className, IBinder service) {
+        	buguService = ((PowerProfilingService.LocalBinder)service).getService();
+        	Log.i("Bugu", "service connected.");
+        	mIsBound = true;
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+          buguService = null;
+          mIsBound = false;
+        }
+    };    
+      
 }

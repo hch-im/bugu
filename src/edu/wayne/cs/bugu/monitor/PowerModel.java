@@ -22,9 +22,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.Arrays;
-import java.util.Map;
 
-import android.hardware.SensorManager;
+import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
 import android.util.Log;
 import android.util.SparseArray;
@@ -38,7 +37,6 @@ public class PowerModel {
 	private NativeLib natLib = new NativeLib();
     private int speedSteps;
     private double[] speedStepAvgPower;
-    private AppPowerInfo appPowerInfo;
     private DevicePowerInfo devicePowerInfo;
     public static final double IO_READ_POWER_PER_BYTE = 0.092; // mJ/kb
     public static final double IO_WRITE_POWER_PER_BYTE = 0.564; //mJ/kb
@@ -63,6 +61,8 @@ public class PowerModel {
 		// calculate device power
 		cpuPower(st);
 		screenPower(st);
+		radioPower(st);
+		
 		// calculate app power
 		AppPowerInfo api;
 		Stats.PidStat ps;
@@ -115,12 +115,24 @@ public class PowerModel {
 		}
 	}
 	
-//TODO modify the following code.
-	
-	public void setAppPowerInfo(AppPowerInfo appPowerInfo)
-	{
-		this.appPowerInfo = appPowerInfo;
+	private void radioPower(Stats st){
+		double radioPower = 0;
+		
+		//when makeing a phone call
+		if(st.mSysStat.mPhoneOn)
+			radioPower += powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ACTIVE);
+		
+		//when scanning mSignalStrengthBin = 0
+		if(st.mSysStat.mSignalStrengthBin != -1)
+			radioPower += powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ON, st.mSysStat.mSignalStrengthBin);
+		
+		//scanning is energy hungry
+		if(st.mSysStat.mPhoneServiceState == ServiceState.STATE_OUT_OF_SERVICE)
+			radioPower += powerProfile.getAveragePower(PowerProfile.POWER_RADIO_SCANNING);				
+		
+		devicePowerInfo.radioPower = radioPower;
 	}
+//TODO modify the following code.
 	
 //	public void appCPUPower(Map<String, ? extends BatteryStats.Uid.Proc> processStats)
 //	{
@@ -253,58 +265,15 @@ public class PowerModel {
 //        }		
 //	}
 	
-	public void appMediaPower(long audioOnTime, long videoOnTime)
-	{
-	    appPowerInfo.audioOnTime = audioOnTime / 1000.0f;
-	    appPowerInfo.videoOnTime = videoOnTime / 1000.0f;
-	    
-	    appPowerInfo.audioPower = powerProfile.getAveragePower(PowerProfile.POWER_AUDIO) * audioOnTime / 1000.0f/1000;
-        appPowerInfo.videoPower = powerProfile.getAveragePower(PowerProfile.POWER_VIDEO) * videoOnTime / 1000.0f/1000;        
-        
-        devicePowerInfo.dspPower = appPowerInfo.audioPower + appPowerInfo.videoPower;
-	}
-	
-//	public void phonePower(long phoneOnTime)
+//	public void appMediaPower(long audioOnTime, long videoOnTime)
 //	{
-//        devicePowerInfo.phonePower = powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ACTIVE)
-//                              * phoneOnTime /1000 / 1000; //mJ
-//        devicePowerInfo.phoneOnTime = phoneOnTime /1000.0;
-//	}
-	
-//	public void screenPower(BatteryStatsImpl batteryStats, long uSecTime)
-//	{
-//        double screenOnTimeMs = batteryStats.getScreenOnTime(uSecTime, statsType) / 1000.0;
-//        devicePowerInfo.screenPower += screenOnTimeMs * powerProfile.getAveragePower(PowerProfile.POWER_SCREEN_ON)  / 1000;
-//        devicePowerInfo.screenOnTime = screenOnTimeMs;
+//	    appPowerInfo.audioOnTime = audioOnTime / 1000.0f;
+//	    appPowerInfo.videoOnTime = videoOnTime / 1000.0f;
+//	    
+//	    appPowerInfo.audioPower = powerProfile.getAveragePower(PowerProfile.POWER_AUDIO) * audioOnTime / 1000.0f/1000;
+//        appPowerInfo.videoPower = powerProfile.getAveragePower(PowerProfile.POWER_VIDEO) * videoOnTime / 1000.0f/1000;        
 //        
-//        double screenFullPower = powerProfile.getAveragePower(PowerProfile.POWER_SCREEN_FULL);
-//        //screen power model
-//        for (int i = 0; i < BatteryStats.NUM_SCREEN_BRIGHTNESS_BINS; i++) {
-//            double screenBinPower = screenFullPower * (i + 0.5f)
-//                    / BatteryStats.NUM_SCREEN_BRIGHTNESS_BINS;
-//            double brightnessTime = batteryStats.getScreenBrightnessTime(i, uSecTime, statsType) / 1000.0;
-//            devicePowerInfo.screenPower += (screenBinPower * brightnessTime  / 1000);
-//        }
-//	}
-	
-//	public void radioPower(BatteryStatsImpl batteryStats, long uSecTime)
-//	{
-//	    //android 3.1
-////        int BINS = BatteryStats.NUM_SIGNAL_STRENGTH_BINS;
-//        //android 4
-//	    double signalTime = 0;
-//        int BINS = SignalStrength.NUM_SIGNAL_STRENGTH_BINS;
-//        for (int i = 0; i < BINS; i++) {
-//            double strengthTimeMs = batteryStats.getPhoneSignalStrengthTime(i, uSecTime, statsType) / 1000.0;
-//            signalTime += strengthTimeMs;
-//            devicePowerInfo.radioPower += (strengthTimeMs / 1000
-//                    * powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ON, i));
-//        }
-//        
-//        double scanningTimeMs = batteryStats.getPhoneSignalScanningTime(uSecTime, statsType) / 1000.0;
-//        devicePowerInfo.radioPower += (scanningTimeMs * powerProfile.getAveragePower(PowerProfile.POWER_RADIO_SCANNING) / 1000);	
-//        devicePowerInfo.signalTime = signalTime;
-//        devicePowerInfo.scanTime = scanningTimeMs;
+//        devicePowerInfo.dspPower = appPowerInfo.audioPower + appPowerInfo.videoPower;
 //	}
 	
 //	public void wifiPower(long wifiOnTime, long wifiRunTime)

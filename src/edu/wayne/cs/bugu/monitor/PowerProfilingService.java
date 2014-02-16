@@ -22,48 +22,52 @@ import java.io.FileWriter;
 import java.util.Vector;
 
 import com.android.internal.os.PowerProfile;
+import com.android.internal.telephony.PhoneConstants;
+import com.android.internal.telephony.TelephonyIntents;
 
-import edu.wayne.cs.bugu.display.BuguActivity;
 import edu.wayne.cs.bugu.proc.ProcFileParser;
 import edu.wayne.cs.bugu.proc.Stats;
 
+import android.app.Activity;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.net.wifi.WifiManager;
+import android.os.Binder;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.telephony.ServiceState;
+import android.telephony.SignalStrength;
+import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.util.SparseArray;
 /**
  * @author hchen
  */
 public class PowerProfilingService extends Service{
+	private final IBinder mBinder = new LocalBinder();
     private boolean state = false;
 	private int period=1000;
-	private static BuguActivity mainActivity;
-	private Stats stats = null;
-	private ProcFileParser procParser = null;
+	private Stats stats = new Stats();
+	private ProcFileParser procParser = new ProcFileParser();
 	
-    private Handler powerHandler = null;
-    private Runnable powerPeriodicTask = null;    
+    private Handler powerHandler = new Handler();
+    private Runnable   	powerPeriodicTask = new Runnable() {
+        public void run() {
+            update();
+            if(state)
+                powerHandler.postDelayed(powerPeriodicTask, period);
+        }
+    };     
 	private FileWriter writer = null;
 	private PowerProfile powerProfile = null;
     private PowerModel powerModel = null;    
     private SparseArray<AppPowerInfo> curAppPower = null;
     private DevicePowerInfo curDevicePower = null;    
-    	
-    public PowerProfilingService(BuguActivity activity){
-    	mainActivity = activity;
-    	stats = new Stats();
-    	procParser = new ProcFileParser();
-    	powerHandler = new Handler();
-    	powerPeriodicTask = new Runnable() {
-            public void run() {
-                update();
-                if(state)
-                    powerHandler.postDelayed(powerPeriodicTask, period);
-            }
-        };    	
-    }
     
     public boolean currentState()
     {
@@ -75,14 +79,14 @@ public class PowerProfilingService extends Service{
      * @param fw
      * @param p
      */
-    public void startMonitor(FileWriter fw, int p)
+    public void startMonitor(FileWriter fw, int p, Activity activity)
     {
         writer = fw;
         period = p;
 
         if(powerProfile == null)
         {
-            powerProfile = new PowerProfile(mainActivity);
+            powerProfile = new PowerProfile(activity);
             powerModel = new PowerModel(powerProfile);
             powerModel.printBasicPower(writer);
         }	            
@@ -108,13 +112,24 @@ public class PowerProfilingService extends Service{
 	}
 
 	@Override
-	public void onCreate() {
-		super.onCreate();
+	public void onCreate() {		
+		IntentFilter filter = new IntentFilter();
+		//phone
+		filter.addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
+		filter.addAction(TelephonyIntents.ACTION_SERVICE_STATE_CHANGED);
+		filter.addAction(TelephonyIntents.ACTION_SIGNAL_STRENGTH_CHANGED);
+		filter.addAction(TelephonyIntents.ACTION_ANY_DATA_CONNECTION_STATE_CHANGED);
+		//wifi
+		filter.addAction(WifiManager.WIFI_AP_STATE_CHANGED_ACTION);
+		filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+		
+		registerReceiver(receiver, filter);
 	}
 
 	@Override
 	public void onDestroy() {        
         powerHandler.removeCallbacks(powerPeriodicTask);
+	    unregisterReceiver(receiver);
 	    super.onDestroy();
 	}
 
@@ -125,9 +140,17 @@ public class PowerProfilingService extends Service{
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		return null;
+		return mBinder;
 	}
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.i("Bugu", "Received start id " + startId + ": " + intent);
+        // We want this service to continue running until it is explicitly
+        // stopped, so return sticky.
+        return START_STICKY;
+    }
+    
 	/**
 	 * Update system and power information.
 	 */
@@ -156,14 +179,6 @@ public class PowerProfilingService extends Service{
 		
 //		stats.dump();
 //		curDevicePower.dump();
-		//TODO modify the following part of code
-		//load new battery stats
-//	    loadStatsData();
-//		long realTime = SystemClock.elapsedRealtime();
-//        long uSecTime = batteryStats.computeBatteryRealtime(realTime * 1000, statsType);  
-//      
-//        estimateAppPower(uSecTime);
-//        estimateDevicePower(uSecTime);
         writePower(stats);
 	}
 	
@@ -204,7 +219,7 @@ public class PowerProfilingService extends Service{
 //            
 //    }
     
-//    private void estimateDevicePower(long uSecTime) {
+    private void estimateDevicePower(long uSecTime) {
 //        long phoneOnTime = batteryStats.getPhoneOnTime(uSecTime, statsType);
 //        powerModel.phonePower(phoneOnTime);
 //        powerModel.radioPower(batteryStats, uSecTime);
@@ -221,7 +236,7 @@ public class PowerProfilingService extends Service{
 //        long btOnTime = batteryStats.getBluetoothOnTime(uSecTime, statsType);
 //        int btPingCount = batteryStats.getBluetoothPingCount();
 //        powerModel.bluetoothPower(btOnTime, btPingCount);
-//    }
+    }
     
 //    private void loadStatsData() {
 //    	if(batteryInfo == null)
@@ -342,4 +357,102 @@ public class PowerProfilingService extends Service{
         
     }
    
+    private final BroadcastReceiver receiver = new BroadcastReceiver() {
+    	   @Override
+    	   public void onReceive(Context context, Intent intent) {
+    	      String action = intent.getAction();
+//call state
+//CALL_STATE_IDLE = 0;
+//CALL_STATE_RINGING = 1;  Ringing. A new call arrived and is ringing or waiting.
+//CALL_STATE_OFFHOOK = 2;  Off-hook. At least one call exists that is dialing, 
+//active, or on hold, and no calls are ringing or waiting.   	      
+    	      if(action.equals(TelephonyManager.ACTION_PHONE_STATE_CHANGED)){
+    	        //phone call on/off
+    	    	  PhoneConstants.State state = getPhoneState(intent);
+    	    	  stats.mSysStat.updatePhoneState(state);
+    	    	  Log.i("Bugu", "Phone state: " + state);
+    	      }
+//radio service state
+//STATE_IN_SERVICE = 0;  the phone is registered with an operator.
+//STATE_OUT_OF_SERVICE = 1; Phone is not registered with any operator, the phone
+//can be currently searching a new operator to register to, or not
+//searching to registration at all, or registration is denied, or radio
+//signal is not available.
+//STATE_EMERGENCY_ONLY = 2; The phone is registered and locked.  Only emergency numbers are allowed.
+//STATE_POWER_OFF = 3; Radio of telephony is explicitly powered off.
+//---------------------------------------------
+//SIM_STATE_UNKNOWN = 0;  Signifies that the SIM is in transition between states.
+//SIM_STATE_ABSENT = 1;  no SIM card is available in the device
+//SIM_STATE_PIN_REQUIRED = 2;
+//SIM_STATE_PUK_REQUIRED = 3;
+//SIM_STATE_NETWORK_LOCKED = 4;
+//SIM_STATE_READY = 5;    	      
+    	      else if(action.equals(TelephonyIntents.ACTION_SERVICE_STATE_CHANGED)){
+    	    	  Bundle data = intent.getExtras();
+    	    	  ServiceState ss = ServiceState.newFromBundle(data);
+    	    	  int state = ss.getState();
+    	          int simState = TelephonyManager.getDefault().getSimState();
+    	          stats.mSysStat.updatePhoneServiceState(state, simState);
+    	    	  Log.i("Bugu", "Phone service state: " + state + " sim state:" + simState);
+    	      }else if(action.equals(TelephonyIntents.ACTION_SIGNAL_STRENGTH_CHANGED)){
+    	          Bundle data = intent.getExtras();
+    	          SignalStrength ss = SignalStrength.newFromBundle(data);
+    	          stats.mSysStat.updateSignalStrengthChange(ss.getLevel());    	    	  
+    	    	  Log.i("Bugu", "signal strength: " + ss.getLevel());
+    	      }
+//3G LTE : defined in TelephoneManager
+//DATA_UNKNOWN = -1;
+//DATA_DISCONNECTED = 0;  Disconnected. IP traffic not available.
+//DATA_CONNECTING = 1;  Currently setting up a data connection.
+//DATA_CONNECTED = 2;  Connected. IP traffic should be available.
+//DATA_SUSPENDED = 3; Suspended. The connection is up, but IP traffic is temporarily unavailable.
+    	      else if(action.equals(TelephonyIntents.ACTION_ANY_DATA_CONNECTION_STATE_CHANGED)){
+                  String iface = intent.getStringExtra(PhoneConstants.DATA_IFACE_NAME_KEY);
+                  PhoneConstants.DataState state = getMobileDataState(intent);
+                  //TODO update to stats
+                  Log.i("Bugu", "data connection state: " + state + " iface: " + iface);
+    	      }
+//wifi events
+//WIFI_STATE_DISABLING = 0;  Wi-Fi is currently being disabled.
+//WIFI_STATE_DISABLED = 1;
+//WIFI_STATE_ENABLING = 2; Wi-Fi is currently being enabled.
+//WIFI_STATE_ENABLED = 3;
+//WIFI_STATE_UNKNOWN = 4;    	      
+    	      else if(action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)){
+    	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_STATE);
+    	    	  stats.mSysStat.updateWifiState(state);
+    	    	  Log.i("Bugu", "Wifi state: " + state);
+    	      }else if(action.equals(WifiManager.WIFI_AP_STATE_CHANGED_ACTION)){
+    	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_AP_STATE);
+    	    	  stats.mSysStat.updateWifiState(state);    	    	  
+    	    	  Log.i("Bugu", "Wifi AP state: " + state);    	    	  
+    	      }
+    	      
+    	      //TODO get wifi running state
+    	   }
+    };   
+    	    
+    public class LocalBinder extends Binder {
+    	public PowerProfilingService getService() {
+          return PowerProfilingService.this;
+        }
+    }
+    
+    private PhoneConstants.DataState getMobileDataState(Intent intent) {
+        String str = intent.getStringExtra(PhoneConstants.STATE_KEY);
+        if (str != null) {
+        	return Enum.valueOf(PhoneConstants.DataState.class, str);
+        }
+        
+        return PhoneConstants.DataState.DISCONNECTED;
+    }
+    
+    private PhoneConstants.State getPhoneState(Intent intent) {
+        String str = intent.getStringExtra(PhoneConstants.STATE_KEY);
+        if (str != null) {
+        	return Enum.valueOf(PhoneConstants.State.class, str);
+        }
+        
+        return PhoneConstants.State.IDLE;
+    }
 }

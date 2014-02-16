@@ -19,7 +19,12 @@
  */
 package edu.wayne.cs.bugu.proc;
 
+import com.android.internal.telephony.PhoneConstants;
+
+import android.net.wifi.WifiManager;
 import android.os.SystemClock;
+import android.telephony.ServiceState;
+import android.telephony.SignalStrength;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -90,7 +95,14 @@ public class Stats {
 		public static final int SCREEN_BRIGHTNESS_BINS = 51; //bin size is 5
 		private long[] mScreenBrightnessBinTimes = new long[SCREEN_BRIGHTNESS_BINS];
 		public int mRelScreenBrightness;//0 means screen is off, 1-255 means screen is on
-				
+		//phone
+		public boolean mPhoneOn = false;
+		public int mSignalStrengthBin = -1;
+		public int mPhoneServiceState = -1;
+		public int mPhoneSimState = -1;
+		//wifi
+		public boolean mWifiOn = false;
+		
 		public boolean updateCPUTime(long[] data){
 			if(data == null || data.length < 4)
 				return false;
@@ -128,6 +140,43 @@ public class Stats {
 				int bin = (mRelScreenBrightness - 1) / 5;
 				mScreenBrightnessBinTimes[bin] += relTime;
 			}
+		}
+		
+		public void updatePhoneServiceState(int state, int simState){
+			mPhoneServiceState = state;
+			mPhoneSimState = simState;
+//			boolean scanning = false;
+			
+			if(state == ServiceState.STATE_POWER_OFF) {
+	            mSignalStrengthBin = -1;
+			}			
+			else if (state == ServiceState.STATE_OUT_OF_SERVICE) {
+//	            scanning = true;
+	            mSignalStrengthBin = SignalStrength.SIGNAL_STRENGTH_NONE_OR_UNKNOWN;	            
+			}
+		}
+		
+		public void updateSignalStrengthChange(int bin){
+			mSignalStrengthBin = bin;
+		}
+		
+		public void updatePhoneState(PhoneConstants.State state){
+			if(state == PhoneConstants.State.IDLE){
+				mPhoneOn = false;
+	    		  //TODO add timer
+			}else{
+				mPhoneOn = true;
+			}
+		}
+		
+		public void updateWifiState(int wifiState){
+            if (wifiState == WifiManager.WIFI_STATE_ENABLED ||
+            		wifiState == WifiManager.WIFI_AP_STATE_ENABLED) {
+            	mWifiOn = true;
+            }else if(wifiState == WifiManager.WIFI_STATE_DISABLED || 
+            		wifiState == WifiManager.WIFI_AP_STATE_DISABLED){
+            	mWifiOn = false;
+            }
 		}
 		
 		/**

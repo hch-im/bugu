@@ -67,6 +67,7 @@ public final class R {
     public static final class string {
         public static final int AveragePower=0x7f060006;
         public static final int DetailPower=0x7f060007;
+        public static final int PowerProfilingService=0x7f06000e;
         public static final int ShowEventFigure=0x7f060009;
         public static final int ShowPowerFigure=0x7f060008;
         public static final int app_name=0x7f060000;
