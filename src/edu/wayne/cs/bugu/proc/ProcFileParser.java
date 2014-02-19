@@ -29,13 +29,11 @@ import java.util.Vector;
 import android.os.Process;
 import android.os.StrictMode;
 
-import edu.wayne.cs.bugu.util.NativeLib;
-
 public class ProcFileParser {
 	// /proc/stat
 	private static final String PROC_STAT = "/proc/stat";
     private static final int[] PROC_STAT_FORMAT = new int[] {
-        PROC_SPACE_TERM|PROC_COMBINE,
+        PROC_SPACE_TERM,
         PROC_SPACE_TERM|PROC_OUT_LONG,                  // 1: user time
         PROC_SPACE_TERM|PROC_OUT_LONG,                  // 2: nice time
         PROC_SPACE_TERM|PROC_OUT_LONG,                  // 3: sys time
@@ -44,6 +42,7 @@ public class ProcFileParser {
         PROC_SPACE_TERM|PROC_OUT_LONG,                  // 6: irq time
         PROC_SPACE_TERM|PROC_OUT_LONG,                  // 7: softirq time        
     };
+    
     private final long[] mProcStatLong = new long[7];
     //TODO should we add cutime cstime 
     // /proc/pid/stat
@@ -71,6 +70,7 @@ public class ProcFileParser {
     private final long[] mProcPidStatusLong = new long[1];
     // /sys/devices/system/cpu/cpu0/cpufreq/stats/time_in_state
     private final String SYS_CPU_SPEED_STEPS = "/sys/devices/system/cpu/cpu0/cpufreq/stats/time_in_state";
+    private final String SYS_CPU_FREQUENCY = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq";
     // proc directory
     private final String PROC_DIR ="/proc";
     private final FilenameFilter pidNameFilter = new FilenameFilter(){    	
@@ -90,27 +90,15 @@ public class ProcFileParser {
     private final String SYS_LEDS_BRIGHTNESS = "/sys/class/leds/lcd-backlight/brightness";
 //    private NativeLib natLib = new NativeLib();
     
-	public void parseProcStat(Stats.SystemStat cpuStat){
+	public boolean parseProcStat(Stats.SystemStat cpuStat){
 		//When using tickless kernel, idle/iowait accounting are not doing.
-		//So the value might get outdated. Try three times, until we get the correct data.		
-		int times = 0;
-		while(times < 3){
-			if(Process.readProcFile(PROC_STAT, PROC_STAT_FORMAT, null, mProcStatLong, null)){
-				if(cpuStat.updateCPUTime(mProcStatLong))
-					break;
-			}
-			times++;
+		//So the value might get outdated. 		
+		if(Process.readProcFile(PROC_STAT, PROC_STAT_FORMAT, null, mProcStatLong, null)){
+			if(cpuStat.updateCPUTime(mProcStatLong))
+				return true;
 		}
 		
-//		if(Process.readProcFile(PROC_STAT, PROC_STAT_FORMAT, null, mProcStatLong, null)){
-//			long idle = natLib.getCPUIdleTime(4);
-//			long iow = natLib.getCPUIOWaitTime(4);
-//			mProcStatLong[3] = idle;
-//			mProcStatLong[4] = iow;
-//			
-//			cpuStat.update(mProcStatLong);
-//		}
-			
+		return false;
 	}
 	
 	public void parseProcPidStat(int pid, Stats.PidStat pidStat){
@@ -127,6 +115,15 @@ public class ProcFileParser {
         	pidStat.uid = (int) mProcPidStatusLong[0];
 	}
 	
+	public void parseCurrentCPUFrequency(Stats.SystemStat st){
+		String str = readFile(SYS_CPU_FREQUENCY, 8);
+		if(str == null)
+			return;
+		
+		int freq = Integer.valueOf(str.split("\n")[0]);
+		st.mCurCPUFrequency = freq;
+	}
+	
 	public void parseCPUSpeedTimes(Stats.SystemStat cpuStat, boolean timeOnly){
 		String str = readFile(SYS_CPU_SPEED_STEPS, 512);
 		if(str == null)
@@ -135,6 +132,8 @@ public class ProcFileParser {
 		String[] vals;
 		int index = 0;
 		long time;
+		long total = 0;
+		
 		for(String token : str.split("\n")){
 			if(str.trim().length() == 0) continue;
 			try{
@@ -146,14 +145,15 @@ public class ProcFileParser {
 				time = Long.valueOf(vals[1]);
 				cpuStat.mRelCpuSpeedTimes[index] = time - cpuStat.mBaseCpuSpeedTime[index];
 				cpuStat.mBaseCpuSpeedTime[index] = time;
+				total += cpuStat.mRelCpuSpeedTimes[index];
 			}catch (NumberFormatException nfe){
 				nfe.printStackTrace();
 			}finally{
 				index++;
 			}
 		}
-		
 		cpuStat.mCpuSpeedStepTimes = index;
+		cpuStat.mSpeedStepTotalTime = total;
 	}
 	
 	public void parseScreenBrightness(Stats.SystemStat st){

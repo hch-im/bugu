@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.
  */
-package edu.wayne.cs.bugu.display;
+package edu.wayne.cs.bugu.ui;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -27,7 +27,9 @@ import java.sql.Timestamp;
 import edu.wayne.cs.bugu.db.RecordDAO;
 import edu.wayne.cs.bugu.db.SqliteHelper;
 import edu.wayne.cs.bugu.db.model.Record;
+import edu.wayne.cs.bugu.device.PowerProfile;
 import edu.wayne.cs.bugu.monitor.PowerProfilingService;
+import edu.wayne.cs.bugu.Constants;
 import edu.wayne.cs.bugu.R;
 
 import android.app.Activity;
@@ -43,7 +45,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 
-public class BuguActivity extends Activity implements OnClickListener{
+public class HomeActivity extends Activity implements OnClickListener{
     private int period=1000;
 	private PowerProfilingService buguService = null;
     private FileWriter writer = null;
@@ -57,6 +59,7 @@ public class BuguActivity extends Activity implements OnClickListener{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.home);
         initViewListeners();
+        PowerProfile pp = PowerProfile.getPowerProfileOfDevice();
     	doBindService();            			
     }
         
@@ -110,7 +113,7 @@ public class BuguActivity extends Activity implements OnClickListener{
                 break;
             case R.id.startButton:
                 Button start = (Button)view;
-                if(buguService != null && buguService.currentState() == false)//not running
+                if(buguService != null && !buguService.isMonitoring())//not running
                 {
                     if(startMonitor() == true)
                         start.setText(R.string.stopButton);
@@ -162,13 +165,17 @@ public class BuguActivity extends Activity implements OnClickListener{
     {
         try {
             File root = Environment.getExternalStorageDirectory();
-            File ptopa = new File(root, "bugu/data");
-            if(ptopa.exists() == false) { 
-                if(!ptopa.mkdir()) return;
+            String appPath = root.getAbsolutePath() + "/bugu/data";
+            File buguData = new File(appPath);
+            if(buguData.exists() == false) { 
+                if(!buguData.mkdirs()) {
+                	Log.e(Constants.APP_TAG, "failed to creat directory: bugu/data");
+                	return;                
+                }
             }
             
             String fileName = System.currentTimeMillis()+"powerlog.txt";
-            File ptopfile = new File(ptopa, fileName);
+            File ptopfile = new File(buguData, fileName);
             if(ptopfile.exists())
             {
                 ptopfile.delete();
@@ -185,7 +192,7 @@ public class BuguActivity extends Activity implements OnClickListener{
             }
             else
             {
-                Log.i("pTopA: ", "Cannot write power data.");
+                Log.e(Constants.APP_TAG, "Cannot write power data.");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -193,7 +200,7 @@ public class BuguActivity extends Activity implements OnClickListener{
     }  
     
     private void doBindService() {
-    	getApplicationContext().bindService(new Intent(BuguActivity.this, 
+    	getApplicationContext().bindService(new Intent(HomeActivity.this, 
         		PowerProfilingService.class), mConnection, Context.BIND_AUTO_CREATE);
     }
 
@@ -208,8 +215,7 @@ public class BuguActivity extends Activity implements OnClickListener{
     private ServiceConnection mConnection = new ServiceConnection() {
 
         public void onServiceConnected(ComponentName className, IBinder service) {
-        	buguService = ((PowerProfilingService.LocalBinder)service).getService();
-        	Log.i("Bugu", "service connected.");
+        	buguService = ((PowerProfilingService.LocalBinder)service).getService();        	
         	mIsBound = true;
         }
 

@@ -1,4 +1,4 @@
-package edu.wayne.cs.bugu.display;
+package edu.wayne.cs.bugu.ui;
 
 import android.app.Activity;
 import android.os.Bundle;

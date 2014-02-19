@@ -25,6 +25,7 @@ import com.android.internal.os.PowerProfile;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.TelephonyIntents;
 
+import edu.wayne.cs.bugu.Constants;
 import edu.wayne.cs.bugu.proc.ProcFileParser;
 import edu.wayne.cs.bugu.proc.Stats;
 
@@ -58,6 +59,8 @@ public class PowerProfilingService extends Service{
     private Handler powerHandler = new Handler();
     private Runnable   	powerPeriodicTask = new Runnable() {
         public void run() {
+            android.os.Process.setThreadPriority(
+                    android.os.Process.THREAD_PRIORITY_MORE_FAVORABLE);
             update();
             if(state)
                 powerHandler.postDelayed(powerPeriodicTask, period);
@@ -69,9 +72,17 @@ public class PowerProfilingService extends Service{
     private SparseArray<AppPowerInfo> curAppPower = null;
     private DevicePowerInfo curDevicePower = null;    
     
-    public boolean currentState()
+    public boolean isMonitoring()
     {
         return state;
+    }
+    
+    public Stats.SystemStat getSystemStat(){
+    	return stats.mSysStat;
+    }
+    
+    public DevicePowerInfo currentDevicePower(){
+    	return curDevicePower;
     }
     
     /**
@@ -145,7 +156,6 @@ public class PowerProfilingService extends Service{
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i("Bugu", "Received start id " + startId + ": " + intent);
         // We want this service to continue running until it is explicitly
         // stopped, so return sticky.
         return START_STICKY;
@@ -159,6 +169,7 @@ public class PowerProfilingService extends Service{
 		procParser.parseProcStat(stats.mSysStat);
 		procParser.parseCPUSpeedTimes(stats.mSysStat, true);
 		procParser.parseScreenBrightness(stats.mSysStat);
+		procParser.parseCurrentCPUFrequency(stats.mSysStat);
 		
 		//update process information
 		Vector<Integer> pids = procParser.getAllPids();
@@ -177,9 +188,9 @@ public class PowerProfilingService extends Service{
 		curDevicePower = new DevicePowerInfo();
 		powerModel.calculatePower(stats, curDevicePower, curAppPower);
 		
-//		stats.dump();
+//		stats.dump(null);
 //		curDevicePower.dump();
-        writePower(stats);
+		writePower(stats);
 	}
 	
 //    private void estimateAppPower(long uSecTime) {
@@ -219,7 +230,7 @@ public class PowerProfilingService extends Service{
 //            
 //    }
     
-    private void estimateDevicePower(long uSecTime) {
+//    private void estimateDevicePower(long uSecTime) {
 //        long phoneOnTime = batteryStats.getPhoneOnTime(uSecTime, statsType);
 //        powerModel.phonePower(phoneOnTime);
 //        powerModel.radioPower(batteryStats, uSecTime);
@@ -236,7 +247,7 @@ public class PowerProfilingService extends Service{
 //        long btOnTime = batteryStats.getBluetoothOnTime(uSecTime, statsType);
 //        int btPingCount = batteryStats.getBluetoothPingCount();
 //        powerModel.bluetoothPower(btOnTime, btPingCount);
-    }
+//    }
     
 //    private void loadStatsData() {
 //    	if(batteryInfo == null)
@@ -346,11 +357,12 @@ public class PowerProfilingService extends Service{
     		return;
         try{
             writer.write("TIME: " + st.mBaseTime + "," + st.mRelTime + "\r\n");
-        	for(int i = 0 ; i < curAppPower.size(); i++){
-        		AppPowerInfo pInfo = curAppPower.valueAt(i);
-                pInfo.write(writer);
-            }
-            curDevicePower.writePower(writer);            
+//        	for(int i = 0 ; i < curAppPower.size(); i++){
+//        		AppPowerInfo pInfo = curAppPower.valueAt(i);
+//                pInfo.write(writer);
+//            }
+            curDevicePower.writePower(writer);    
+//            st.dump(writer);
         }catch(Exception ex){
         	ex.printStackTrace();
         }
@@ -370,7 +382,8 @@ public class PowerProfilingService extends Service{
     	        //phone call on/off
     	    	  PhoneConstants.State state = getPhoneState(intent);
     	    	  stats.mSysStat.updatePhoneState(state);
-    	    	  Log.i("Bugu", "Phone state: " + state);
+    	          if(Constants.DEBUG)
+    	        	  Log.i(Constants.APP_TAG, "Phone state: " + state);
     	      }
 //radio service state
 //STATE_IN_SERVICE = 0;  the phone is registered with an operator.
@@ -393,12 +406,14 @@ public class PowerProfilingService extends Service{
     	    	  int state = ss.getState();
     	          int simState = TelephonyManager.getDefault().getSimState();
     	          stats.mSysStat.updatePhoneServiceState(state, simState);
-    	    	  Log.i("Bugu", "Phone service state: " + state + " sim state:" + simState);
+    	          if(Constants.DEBUG)
+    	        	  Log.i(Constants.APP_TAG, "Phone service state: " + state + " sim state:" + simState);
     	      }else if(action.equals(TelephonyIntents.ACTION_SIGNAL_STRENGTH_CHANGED)){
     	          Bundle data = intent.getExtras();
     	          SignalStrength ss = SignalStrength.newFromBundle(data);
     	          stats.mSysStat.updateSignalStrengthChange(ss.getLevel());    	    	  
-    	    	  Log.i("Bugu", "signal strength: " + ss.getLevel());
+    	          if(Constants.DEBUG)
+    	        	  Log.i(Constants.APP_TAG, "signal strength: " + ss.getLevel());
     	      }
 //3G LTE : defined in TelephoneManager
 //DATA_UNKNOWN = -1;
@@ -410,7 +425,8 @@ public class PowerProfilingService extends Service{
                   String iface = intent.getStringExtra(PhoneConstants.DATA_IFACE_NAME_KEY);
                   PhoneConstants.DataState state = getMobileDataState(intent);
                   //TODO update to stats
-                  Log.i("Bugu", "data connection state: " + state + " iface: " + iface);
+    	          if(Constants.DEBUG)
+    	        	  Log.i(Constants.APP_TAG, "data connection state: " + state + " iface: " + iface);
     	      }
 //wifi events
 //WIFI_STATE_DISABLING = 0;  Wi-Fi is currently being disabled.
@@ -421,11 +437,13 @@ public class PowerProfilingService extends Service{
     	      else if(action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)){
     	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_STATE);
     	    	  stats.mSysStat.updateWifiState(state);
-    	    	  Log.i("Bugu", "Wifi state: " + state);
+    	          if(Constants.DEBUG)
+    	        	  Log.i(Constants.APP_TAG, "Wifi state: " + state);
     	      }else if(action.equals(WifiManager.WIFI_AP_STATE_CHANGED_ACTION)){
     	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_AP_STATE);
     	    	  stats.mSysStat.updateWifiState(state);    	    	  
-    	    	  Log.i("Bugu", "Wifi AP state: " + state);    	    	  
+    	          if(Constants.DEBUG)
+    	        	  Log.i(Constants.APP_TAG, "Wifi AP state: " + state);    	    	  
     	      }
     	      
     	      //TODO get wifi running state

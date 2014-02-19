@@ -1,0 +1,112 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context=".DevicePowerActivity" >
+
+    <TextView
+        android:id="@+id/cpuTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="21dp"
+        android:layout_marginTop="26dp"
+        android:text="Processor:"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/cpuPowerTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/cpuTextView"
+        android:layout_alignBottom="@+id/cpuTextView"
+        android:layout_marginLeft="68dp"
+        android:layout_toRightOf="@+id/cpuTextView"
+        android:text="0.0 mw"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/displayPowerTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/displayTextView"
+        android:layout_alignBottom="@+id/displayTextView"
+        android:layout_alignLeft="@+id/cpuPowerTextView"
+        android:text="0.0 mw"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/radioPowerTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/radioTextView"
+        android:layout_alignBottom="@+id/radioTextView"
+        android:layout_alignLeft="@+id/displayPowerTextView"
+        android:text="0.0 mw"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/displayTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/cpuTextView"
+        android:layout_below="@+id/cpuTextView"
+        android:layout_marginTop="18dp"
+        android:text="Display:"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/radioTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/displayTextView"
+        android:layout_below="@+id/displayTextView"
+        android:layout_marginTop="19dp"
+        android:text="Radio:"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/wifiTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/radioTextView"
+        android:layout_below="@+id/radioTextView"
+        android:layout_marginTop="20dp"
+        android:text="WiFi:"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/wifiPowerTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/wifiTextView"
+        android:layout_alignBottom="@+id/wifiTextView"
+        android:layout_alignLeft="@+id/radioPowerTextView"
+        android:text="0.0 mw"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/mediaTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/wifiTextView"
+        android:layout_below="@+id/wifiTextView"
+        android:layout_marginTop="20dp"
+        android:text="Media:"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/mediaPowerTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/mediaTextView"
+        android:layout_alignLeft="@+id/wifiPowerTextView"
+        android:text="0.0 mw"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+</RelativeLayout>

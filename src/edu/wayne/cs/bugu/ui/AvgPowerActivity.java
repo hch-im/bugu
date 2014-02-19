@@ -1,4 +1,4 @@
-package edu.wayne.cs.bugu.display;
+package edu.wayne.cs.bugu.ui;
 
 import java.io.BufferedReader;
 import java.io.File;

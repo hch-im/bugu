@@ -29,6 +29,7 @@ import android.util.Log;
 import android.util.SparseArray;
 import com.android.internal.os.PowerProfile;
 
+import edu.wayne.cs.bugu.Constants;
 import edu.wayne.cs.bugu.proc.Stats;
 import edu.wayne.cs.bugu.util.NativeLib;
 // the unit of power is mA
@@ -87,7 +88,7 @@ public class PowerModel {
 	 */
 	private void calculateProcessPower(Stats.PidStat ps, Stats.SystemStat ss, DevicePowerInfo dpi, AppPowerInfo api){
 		//cpu
-		api.cpuPower += dpi.cpuPower * (ps.mRelCPUTime * 1.0/ss.relCPUTime());
+		api.cpuPower += dpi.cpuPower * (ps.mRelCPUTime * 1.0/ss.mRelCPUTime);
 		//TODO how to handle application wakelock power
 	}
 	
@@ -97,7 +98,12 @@ public class PowerModel {
 			eng += (st.mSysStat.mRelCpuSpeedTimes[i] * speedStepAvgPower[i]);
 		}
 		
-		devicePowerInfo.cpuPower = (eng/st.mRelTime);
+		double power = (eng * st.mSysStat.cpuUtilization /st.mSysStat.mSpeedStepTotalTime);
+		devicePowerInfo.cpuPower = power;
+		//The second power model only use current frequency
+//		int index = st.mSysStat.indexOfFrequency(st.mSysStat.mCurCPUFrequency);
+//		eng = speedStepAvgPower[index] * st.mSysStat.cpuUtilization;
+//		devicePowerInfo.cpuPower = eng; 
 		//TODO base cpu power?
 	}
 	
@@ -339,6 +345,8 @@ while ((line = reader.readLine()) != null)
                     break;
                 }
             }
+            br.close();
+            fr.close();
             return iobytes;
         }catch(Exception ex)
         {
@@ -347,10 +355,9 @@ while ((line = reader.readLine()) != null)
         }
     }	
     
-    private FileWriter wr;
     public void printBasicPower(FileWriter wr)
     {
-        if(wr == null) return; this.wr = wr;
+        if(wr == null) return;
         try{
             //cpu power
             for (int p = 0; p < speedSteps; p++) {

@@ -1,15 +1,8 @@
-package edu.wayne.cs.bugu.display;
+package edu.wayne.cs.bugu.ui;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 import edu.wayne.cs.bugu.db.RecordDAO;
 import edu.wayne.cs.bugu.db.model.Record;
@@ -19,11 +12,8 @@ import android.app.ListActivity;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Message;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -100,13 +90,8 @@ public class RecordActivity extends ListActivity{
                 break;   
             case 4:
                 if(dao.remove(r.getId())){ 
-                    File f = new File(Environment.getExternalStorageDirectory(), "ptopa/data/" + r.getName());
-                    if(f.exists()) f.delete();
-                    f = new File(Environment.getExternalStorageDirectory(), "ptopa/data/powerresult_" + r.getName());
-                    if(f.exists()) f.delete();
-                    f = new File(Environment.getExternalStorageDirectory(), "ptopa/data/result_" + r.getName());
+                    File f = new File(Environment.getExternalStorageDirectory(), "bugu/data/" + r.getName());
                     if(f.exists()) f.delete();                    
-                    
                     resetList();
                 }
                 break;

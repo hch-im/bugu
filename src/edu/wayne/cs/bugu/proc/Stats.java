@@ -19,7 +19,12 @@
  */
 package edu.wayne.cs.bugu.proc;
 
+import java.io.FileWriter;
+import java.io.IOException;
+
 import com.android.internal.telephony.PhoneConstants;
+
+import edu.wayne.cs.bugu.Constants;
 
 import android.net.wifi.WifiManager;
 import android.os.SystemClock;
@@ -34,7 +39,7 @@ public class Stats {
 	public final SparseArray<PidStat> mPidStats= new SparseArray<PidStat>();
 	public final SparseArray<UidStat> mUidStats= new SparseArray<UidStat>();
 	
-	public long mRelTime; //miliseconds
+	public long mRelTime; //10 ms
 	
 	public PidStat getPidStat(int pid){
 		PidStat pStat = mPidStats.get(pid, null);
@@ -70,26 +75,22 @@ public class Stats {
 	public class SystemStat{
 		public long mBaseUserTime = 0;
 		public long mBaseSysTime = 0;
-		public long mBaseNiceTime = 0;
-		public long mBaseIdleTime = 0;
-		public long mBaseIOWaitTime = 0;
-		public long mBaseIRQTime = 0;
-		public long mBaseSoftIRQTime = 0;
+		public long mBaseCPUTime = 0;
 		public long mBaseScreenOffTime = 0;
 		
 		public long[] mBaseCpuSpeedTime = new long[32];
 		public long[] mBaseCpuSpeedSteps = new long[32];
 		//relative time in 10 milli sconds
-		//system cpu usage = (user + sys + io + irq + softirq)/(user + sys + io + irq + softirq + idle)		
-		public int mRelUserTime;
-		public int mRelSysTime;
-		public int mRelIdleTime;
-		public int mRelIOWaitTime;
-		public int mRelIRQTime;
-		public int mRelSoftIRQTime;
-		public int mRelCPUTime;//the summation of all the previous times
+		//system cpu usage = (user + sys + irq + softirq)/(user + sys + io + irq + softirq + idle)		
+		public long mRelUserTime;
+		public long mRelSysTime;
+		public long mRelCPUTime;
+		
 		public long[] mRelCpuSpeedTimes = new long[32];		
 		public int mCpuSpeedStepTimes = 0;		
+		public int mCurCPUFrequency;
+		public double cpuUtilization;
+		public long mSpeedStepTotalTime;
 		
 		public long mRelScreenOffTime;
 		public static final int SCREEN_BRIGHTNESS_BINS = 51; //bin size is 5
@@ -104,27 +105,33 @@ public class Stats {
 		public boolean mWifiOn = false;
 		
 		public boolean updateCPUTime(long[] data){
-			if(data == null || data.length < 4)
+			if(data == null || data.length < 7)
 				return false;
-			if(data[3] < mBaseIdleTime || data[4] < mBaseIOWaitTime)
-				return false;
-			// total user time = user time + nice time
-			mRelUserTime = (int)(data[0] - mBaseUserTime) + (int)(data[1] -mBaseNiceTime);
-			mRelSysTime = (int)(data[2] - mBaseSysTime);
-			mRelIdleTime = (int)(data[3] - mBaseIdleTime);
-			mRelIOWaitTime = (int)(data[4] - mBaseIOWaitTime);
-			mRelIRQTime = (int)(data[5] - mBaseIRQTime);
-			mRelSoftIRQTime = (int)(data[6] - mBaseSoftIRQTime);
 			
-			mBaseUserTime = data[0];
-			mBaseNiceTime = data[1];
-			mBaseSysTime = data[2];
-			mBaseIdleTime = data[3];
-			mBaseIOWaitTime = data[4];
-			mBaseIRQTime = data[5];
-			mBaseSoftIRQTime = data[6];			
-			mRelCPUTime = mRelUserTime + mRelSysTime + mRelIdleTime + mRelIOWaitTime + mRelIRQTime + mRelSoftIRQTime;
+			long usr = data[0] + data[1];
+			long sys = data[2] + data[5] + data[6];
+			long total = usr + sys + data[3] + data[4];
+			
+//			Log.i("Bugu", "time " + mRelTime + " - " + usr + " " + sys + " " + total);			
+			
+			// total user time = user time + nice time
+			mRelUserTime = usr - mBaseUserTime;
+			mRelSysTime = sys - mBaseSysTime;
+			if(mRelSysTime < 0) mRelSysTime = 0;
+			long delta = total - mBaseCPUTime;
+			if(delta < 0 || Math.abs(delta) > mRelTime * 5){
+				//keep last one
+			}else{
+				mRelCPUTime = delta;
+			}
+			
+			//user time
+			mBaseUserTime = usr;
+			mBaseSysTime = sys;
+			mBaseCPUTime = total;
 
+			cpuUtilization = 1.0 * (mRelUserTime + mRelSysTime) / mRelCPUTime;
+//			Log.i("Bugu", "utilization " + cpuUtilization * 100 + " " + mCurCPUFrequency/1000 + " " + mRelUserTime + " " + mRelSysTime + " " + mRelCPUTime);
 			return true;
 		}
 		
@@ -179,12 +186,20 @@ public class Stats {
             }
 		}
 		
-		/**
-		 * cpu time = user+system+nice+idle+iowait+irq+softirq
-		 * @return
-		 */
-		public long relCPUTime(){
-			return mRelCPUTime;
+		public double cpuUtilization(){
+			return cpuUtilization;
+		}
+		
+		public int indexOfFrequency(int frequency){
+			int index = -1;
+			for(int i = 0; i < mCpuSpeedStepTimes; i++){
+				if(mBaseCpuSpeedSteps[i] == frequency){
+					index = i;
+					break;
+				}
+			}
+			
+			return index;
 		}
 	}
 	
@@ -231,30 +246,31 @@ public class Stats {
 		}
 	}
 	
-	public void dump(){
-		StringBuffer msg = new StringBuffer();
+	public void dump(FileWriter fw){
+		StringBuffer msg = new StringBuffer("-----------------------------------\r\n");
 		msg.append("interval: ").append(mRelTime).append(" 10 ms\r\n");
-		msg.append("cpu time: ").append(mSysStat.relCPUTime()).append(" jiffies(10ms)\r\n");			
 		msg.append("(user + sys) time: ").append(mSysStat.mRelSysTime + mSysStat.mRelUserTime).append(" jiffies(10ms)\r\n");
-		msg.append("idle time: ").append(mSysStat.mRelIdleTime).append(" base:(").append(mSysStat.mBaseIdleTime).append(") jiffies(10ms)\r\n");	
-		msg.append("io wait time: ").append(mSysStat.mRelIOWaitTime).append(" jiffies(10ms)\r\n");	
-		msg.append("irq time: ").append(mSysStat.mRelIRQTime).append(" jiffies(10ms)\r\n");	
-		msg.append("softirq time: ").append(mSysStat.mRelSoftIRQTime).append(" base:(").append(mSysStat.mBaseSoftIRQTime).append(") jiffies(10ms)\r\n");	
+		msg.append("frequency: ").append(mSysStat.mCurCPUFrequency).append(" mhz\r\n");
+//		long speedTime = 0;
+//		for(int i = 0; i < mSysStat.mCpuSpeedStepTimes; i++){
+//			speedTime += mSysStat.mRelCpuSpeedTimes[i];
+//			msg.append("step time").append(i).append(":").append(mSysStat.mRelCpuSpeedTimes[i]).append("\r\n");
+//		}
+//		msg.append("speed step time: ").append(speedTime).append(" speed 0:(").append(mSysStat.mRelCpuSpeedTimes[0]).append(") jiffies(10ms)\r\n");		
+		msg.append("cpu utilization: ").append(mSysStat.cpuUtilization()).append(" \r\n");			
 		
-		long speedTime = 0;
-		for(int i = 0; i < mSysStat.mCpuSpeedStepTimes; i++){
-			speedTime += mSysStat.mRelCpuSpeedTimes[i];
-			msg.append("step time").append(i).append(":").append(mSysStat.mRelCpuSpeedTimes[i]).append("\r\n");
-		}
-		msg.append("speed step time: ").append(speedTime).append(" speed 0:(").append(mSysStat.mRelCpuSpeedTimes[0]).append(") jiffies(10ms)\r\n");		
-		
-		long pidtimes = 0;		
-		for(int i = 0; i < mPidStats.size(); i++){
-			pidtimes += mPidStats.valueAt(i).mRelCPUTime;
-		}
-		msg.append("pids cpu time: ").append(pidtimes).append(" jiffies(10ms)\r\n");
+//		long pidtimes = 0;		
+//		for(int i = 0; i < mPidStats.size(); i++){
+//			pidtimes += mPidStats.valueAt(i).mRelCPUTime;
+//		}
+//		msg.append("pids cpu time: ").append(pidtimes).append(" jiffies(10ms)\r\n");
 		//the summation of pids cpu time is a little larger than (user + sys) time.
 		//the summation of speed step time is close to interval
-		Log.i("Bugu", msg.toString());
+		if(fw != null){
+			try{
+				fw.write(msg.toString());
+			}catch(IOException ioe){}
+		}else
+			Log.i(Constants.APP_TAG, msg.toString());
 	}
 }

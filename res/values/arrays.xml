@@ -5,7 +5,6 @@
         <item>@string/DetailPower</item>
 		<item>@string/ShowPowerFigure</item>        
 		<item>@string/ShowEventFigure</item>        		
-        <item>@string/uploadlabel</item>
         <item>@string/deletelabel</item>        
     </array>
     <array name = "apppoweropt">

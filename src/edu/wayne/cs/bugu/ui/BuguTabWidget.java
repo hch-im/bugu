@@ -1,4 +1,4 @@
-package edu.wayne.cs.bugu.display;
+package edu.wayne.cs.bugu.ui;
 
 import edu.wayne.cs.bugu.R;
 import android.app.TabActivity;
@@ -12,22 +12,19 @@ public class BuguTabWidget extends TabActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        Resources res = getResources(); // Resource object to get Drawables
-        TabHost tabHost = getTabHost();  // The activity TabHost
-        TabHost.TabSpec spec;  // Resusable TabSpec for each tab
-        Intent intent;  // Reusable Intent for each tab
-
-        // Create an Intent to launch an Activity for the tab (to be reused)
-        intent = new Intent().setClass(this, BuguActivity.class);
-        // Initialize a TabSpec for each tab and add it to the TabHost
+        Resources res = getResources();
+        TabHost tabHost = getTabHost();
+        TabHost.TabSpec spec;
+        Intent intent; 
+        
+        intent = new Intent().setClass(this, HomeActivity.class);
         spec = tabHost.newTabSpec("home").setIndicator("Home",
                           res.getDrawable(R.drawable.ic_tab_home))
                       .setContent(intent);
         tabHost.addTab(spec);
 
-        // Do the same for the other tabs
-        intent = new Intent().setClass(this, AppPowerActivity.class);
-        spec = tabHost.newTabSpec("apppower").setIndicator("Power",
+        intent = new Intent().setClass(this, DevicePowerActivity.class);
+        spec = tabHost.newTabSpec("apppower").setIndicator("Device Power",
                           res.getDrawable(R.drawable.ic_tab_apppower))
                       .setContent(intent);
         tabHost.addTab(spec);

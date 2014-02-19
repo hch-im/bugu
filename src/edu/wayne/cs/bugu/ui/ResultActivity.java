@@ -1,33 +1,16 @@
-package edu.wayne.cs.bugu.display;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
+package edu.wayne.cs.bugu.ui;
 
 import edu.wayne.cs.bugu.R;
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.TableLayout;
-import android.widget.TableRow;
-import android.widget.TextView;
 
 public class ResultActivity extends Activity implements OnClickListener{
-    private TableLayout tView;
-    private String filename;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        filename = (String)getIntent().getExtra(RecordActivity.EXTRA_FILENAME);
         setContentView(R.layout.result);                
-        tView = (TableLayout)findViewById(R.id.tableView);         
         preparePowerView();
     }
     

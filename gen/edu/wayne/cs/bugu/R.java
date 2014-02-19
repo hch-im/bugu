@@ -24,6 +24,16 @@ public final class R {
         public static final int text_background=0x7f050001;
         public static final int violetred=0x7f050006;
     }
+    public static final class dimen {
+        /**  Default screen margins, per the Android Design guidelines. 
+
+         Customize dimensions originally defined in res/values/dimens.xml (such as
+         screen margins) for sw720dp devices (e.g. 10" tablets) in landscape here.
+    
+         */
+        public static final int activity_horizontal_margin=0x7f060000;
+        public static final int activity_vertical_margin=0x7f060001;
+    }
     public static final class drawable {
         public static final int ic_launcher=0x7f020000;
         public static final int ic_menu_home=0x7f020001;
@@ -36,26 +46,26 @@ public final class R {
         public static final int ic_tab_setup=0x7f020008;
     }
     public static final class id {
-        public static final int button1=0x7f080002;
-        public static final int button2=0x7f080005;
-        public static final int editText1=0x7f080001;
-        public static final int eventFigure=0x7f08000c;
-        public static final int exitButton=0x7f08000e;
-        public static final int horizontalScrollView1=0x7f08000b;
-        public static final int powerFigure=0x7f08000f;
-        public static final int scrollView1=0x7f080004;
-        public static final int spinner1=0x7f080000;
-        public static final int spinner2=0x7f080003;
-        public static final int startButton=0x7f08000d;
-        public static final int tableRow1=0x7f080007;
-        public static final int tableView=0x7f080010;
-        public static final int table_app_power=0x7f080006;
-        public static final int textView1=0x7f080008;
-        public static final int textView2=0x7f08000a;
-        public static final int textView3=0x7f080009;
+        public static final int action_settings=0x7f0a0010;
+        public static final int cpuPowerTextView=0x7f0a0001;
+        public static final int cpuTextView=0x7f0a0000;
+        public static final int displayPowerTextView=0x7f0a0002;
+        public static final int displayTextView=0x7f0a0003;
+        public static final int eventFigure=0x7f0a000b;
+        public static final int exitButton=0x7f0a000d;
+        public static final int horizontalScrollView1=0x7f0a000a;
+        public static final int mediaPowerTextView=0x7f0a0009;
+        public static final int mediaTextView=0x7f0a0008;
+        public static final int powerFigure=0x7f0a000e;
+        public static final int radioPowerTextView=0x7f0a0004;
+        public static final int radioTextView=0x7f0a0005;
+        public static final int startButton=0x7f0a000c;
+        public static final int tableView=0x7f0a000f;
+        public static final int wifiPowerTextView=0x7f0a0007;
+        public static final int wifiTextView=0x7f0a0006;
     }
     public static final class layout {
-        public static final int apppower=0x7f030000;
+        public static final int activity_device_power=0x7f030000;
         public static final int comparepower=0x7f030001;
         public static final int efigurerecord=0x7f030002;
         public static final int home=0x7f030003;
@@ -64,24 +74,30 @@ public final class R {
         public static final int record=0x7f030006;
         public static final int result=0x7f030007;
     }
+    public static final class menu {
+        public static final int device_power=0x7f090000;
+    }
     public static final class string {
-        public static final int AveragePower=0x7f060006;
-        public static final int DetailPower=0x7f060007;
-        public static final int PowerProfilingService=0x7f06000e;
-        public static final int ShowEventFigure=0x7f060009;
-        public static final int ShowPowerFigure=0x7f060008;
-        public static final int app_name=0x7f060000;
-        public static final int btn_exit=0x7f060001;
-        public static final int cleanButton=0x7f060004;
-        public static final int deletelabel=0x7f06000d;
-        public static final int figureLabel=0x7f06000b;
-        public static final int resultTypeOption=0x7f060005;
-        public static final int startButton=0x7f060002;
-        public static final int stopButton=0x7f060003;
-        public static final int tableLabel=0x7f06000a;
-        public static final int uploadlabel=0x7f06000c;
+        public static final int AveragePower=0x7f070006;
+        public static final int DetailPower=0x7f070007;
+        public static final int PowerProfilingService=0x7f07000e;
+        public static final int ShowEventFigure=0x7f070009;
+        public static final int ShowPowerFigure=0x7f070008;
+        public static final int action_settings=0x7f070010;
+        public static final int app_name=0x7f070000;
+        public static final int btn_exit=0x7f070001;
+        public static final int cleanButton=0x7f070004;
+        public static final int deletelabel=0x7f07000d;
+        public static final int figureLabel=0x7f07000b;
+        public static final int hello_world=0x7f070011;
+        public static final int resultTypeOption=0x7f070005;
+        public static final int startButton=0x7f070002;
+        public static final int stopButton=0x7f070003;
+        public static final int tableLabel=0x7f07000a;
+        public static final int title_activity_device_power=0x7f07000f;
+        public static final int uploadlabel=0x7f07000c;
     }
     public static final class style {
-        public static final int sty_button=0x7f070000;
+        public static final int sty_button=0x7f080000;
     }
 }
