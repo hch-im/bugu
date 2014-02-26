@@ -4,7 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class AppPowerInfo {
-	int id = 0;
+	public int id = 0;
 	String name = null;
 	//milli joule
 	double cpuPower = 0;

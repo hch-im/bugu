@@ -6,7 +6,7 @@ import java.text.NumberFormat;
 import edu.wayne.cs.bugu.R;
 import edu.wayne.cs.bugu.monitor.DevicePowerInfo;
 import edu.wayne.cs.bugu.monitor.PowerProfilingService;
-import edu.wayne.cs.bugu.proc.Stats;
+import edu.wayne.cs.bugu.proc.component.CPU;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -81,11 +81,11 @@ public class DevicePowerActivity extends Activity {
 
 	private void updateDisplay(){
 		if(buguService != null && buguService.isMonitoring()){
-			Stats.SystemStat st = buguService.getSystemStat();
+			CPU cpustat = buguService.getStats().mSysStat.cpu;
 			DevicePowerInfo dp = buguService.currentDevicePower();
 			
-			if(st != null){
-				media.setText(formatter.format(st.cpuUtilization * 100) + "%");			
+			if(cpustat != null){
+				media.setText(formatter.format(cpustat.cpuUtilization) + "%");			
 			}
 			
 			if(dp != null){

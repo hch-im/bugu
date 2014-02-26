@@ -19,14 +19,13 @@
  */
 package edu.wayne.cs.bugu.monitor;
 import java.io.FileWriter;
-import java.util.Vector;
+import java.util.ArrayList;
 
-import com.android.internal.os.PowerProfile;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.TelephonyIntents;
 
 import edu.wayne.cs.bugu.Constants;
-import edu.wayne.cs.bugu.proc.ProcFileParser;
+import edu.wayne.cs.bugu.device.BasePowerProfile;
 import edu.wayne.cs.bugu.proc.Stats;
 
 import android.app.Activity;
@@ -45,7 +44,6 @@ import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.util.SparseArray;
 /**
  * @author hchen
  */
@@ -53,36 +51,34 @@ public class PowerProfilingService extends Service{
 	private final IBinder mBinder = new LocalBinder();
     private boolean state = false;
 	private int period=1000;
-	private Stats stats = new Stats();
-	private ProcFileParser procParser = new ProcFileParser();
-	
+	private final Stats stats = new Stats();
+
     private Handler powerHandler = new Handler();
     private Runnable   	powerPeriodicTask = new Runnable() {
         public void run() {
+            if(!state)
+            	return;
+            
             android.os.Process.setThreadPriority(
-                    android.os.Process.THREAD_PRIORITY_MORE_FAVORABLE);
+                    android.os.Process.THREAD_PRIORITY_MORE_FAVORABLE);            
             update();
-            if(state)
-                powerHandler.postDelayed(powerPeriodicTask, period);
+            powerHandler.postDelayed(powerPeriodicTask, period);
         }
     };     
 	private FileWriter writer = null;
-	private PowerProfile powerProfile = null;
-    private PowerModel powerModel = null;    
-    private SparseArray<AppPowerInfo> curAppPower = null;
-    private DevicePowerInfo curDevicePower = null;    
+    private ArrayList<DevicePowerInfo> devPowerHistory = null;
     
     public boolean isMonitoring()
     {
         return state;
     }
     
-    public Stats.SystemStat getSystemStat(){
-    	return stats.mSysStat;
+    public DevicePowerInfo currentDevicePower(){
+    	return stats.curDevicePower;
     }
     
-    public DevicePowerInfo currentDevicePower(){
-    	return curDevicePower;
+    public Stats getStats(){
+    	return stats;
     }
     
     /**
@@ -95,17 +91,14 @@ public class PowerProfilingService extends Service{
         writer = fw;
         period = p;
 
-        if(powerProfile == null)
+        if(stats.powerProfile == null)
         {
-            powerProfile = new PowerProfile(activity);
-            powerModel = new PowerModel(powerProfile);
-            powerModel.printBasicPower(writer);
+            stats.powerProfile = BasePowerProfile.getPowerProfileOfDevice(activity);
         }	            
-        // init system information
-		procParser.parseCPUSpeedTimes(stats.mSysStat, false);
+
 		stats.updateTime();
-		
-        powerHandler.postDelayed(powerPeriodicTask, period);   
+		devPowerHistory = new ArrayList<DevicePowerInfo>();        
+		powerHandler.postDelayed(powerPeriodicTask, period);   
         state = true;
     }
     
@@ -115,6 +108,13 @@ public class PowerProfilingService extends Service{
     public void stopMonitor()
     {        
         state = false;
+        for(DevicePowerInfo dpi : devPowerHistory){
+        	try{
+        		dpi.writePower(writer);
+        	}catch(Exception ex){ex.printStackTrace();}
+        }
+        
+        devPowerHistory = null;
     }
     
 	@Override
@@ -124,6 +124,9 @@ public class PowerProfilingService extends Service{
 
 	@Override
 	public void onCreate() {		
+		/*
+		 * Register system events of devices. 
+		 */
 		IntentFilter filter = new IntentFilter();
 		//phone
 		filter.addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
@@ -135,8 +138,10 @@ public class PowerProfilingService extends Service{
 		filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
 		
 		registerReceiver(receiver, filter);
-	}
 
+		stats.init();
+	}
+	
 	@Override
 	public void onDestroy() {        
         powerHandler.removeCallbacks(powerPeriodicTask);
@@ -165,32 +170,17 @@ public class PowerProfilingService extends Service{
 	 * Update system and power information.
 	 */
 	public void update(){
-		//update system information
-		procParser.parseProcStat(stats.mSysStat);
-		procParser.parseCPUSpeedTimes(stats.mSysStat, true);
-		procParser.parseScreenBrightness(stats.mSysStat);
-		procParser.parseCurrentCPUFrequency(stats.mSysStat);
-		
-		//update process information
-		Vector<Integer> pids = procParser.getAllPids();
-		Stats.PidStat pidStat = null;
-		for(Integer pid : pids){
-			pidStat = stats.getPidStat(pid);
-			if(pidStat.uid == -1){//new process
-				procParser.parseProcPidStatus(pid, pidStat);
-			}
-			procParser.parseProcPidStat(pid, pidStat);
-		}
+		if(devPowerHistory == null)//stopped
+			return;
 		
 		stats.updateTime();
-		//init the new objects for recording power information
-		curAppPower = new SparseArray<AppPowerInfo>();
-		curDevicePower = new DevicePowerInfo();
-		powerModel.calculatePower(stats, curDevicePower, curAppPower);
+		stats.updateStates();		
+		stats.calculatePower();
 		
-//		stats.dump(null);
+		stats.dump(null);
 //		curDevicePower.dump();
-		writePower(stats);
+		
+		devPowerHistory.add(stats.curDevicePower);
 	}
 	
 //    private void estimateAppPower(long uSecTime) {
@@ -350,24 +340,6 @@ public class PowerProfilingService extends Service{
 //    	
 //    	return appWifiRunTime;
 //    }
-    
-    private void writePower(Stats st)
-    {
-    	if(writer == null)
-    		return;
-        try{
-            writer.write("TIME: " + st.mBaseTime + "," + st.mRelTime + "\r\n");
-//        	for(int i = 0 ; i < curAppPower.size(); i++){
-//        		AppPowerInfo pInfo = curAppPower.valueAt(i);
-//                pInfo.write(writer);
-//            }
-            curDevicePower.writePower(writer);    
-//            st.dump(writer);
-        }catch(Exception ex){
-        	ex.printStackTrace();
-        }
-        
-    }
    
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
     	   @Override
@@ -381,8 +353,8 @@ public class PowerProfilingService extends Service{
     	      if(action.equals(TelephonyManager.ACTION_PHONE_STATE_CHANGED)){
     	        //phone call on/off
     	    	  PhoneConstants.State state = getPhoneState(intent);
-    	    	  stats.mSysStat.updatePhoneState(state);
-    	          if(Constants.DEBUG)
+    	    	  stats.mSysStat.radio.updatePhoneState(state);
+    	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Phone state: " + state);
     	      }
 //radio service state
@@ -405,14 +377,14 @@ public class PowerProfilingService extends Service{
     	    	  ServiceState ss = ServiceState.newFromBundle(data);
     	    	  int state = ss.getState();
     	          int simState = TelephonyManager.getDefault().getSimState();
-    	          stats.mSysStat.updatePhoneServiceState(state, simState);
-    	          if(Constants.DEBUG)
+    	          stats.mSysStat.radio.updatePhoneServiceState(state, simState);
+    	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Phone service state: " + state + " sim state:" + simState);
     	      }else if(action.equals(TelephonyIntents.ACTION_SIGNAL_STRENGTH_CHANGED)){
     	          Bundle data = intent.getExtras();
     	          SignalStrength ss = SignalStrength.newFromBundle(data);
-    	          stats.mSysStat.updateSignalStrengthChange(ss.getLevel());    	    	  
-    	          if(Constants.DEBUG)
+    	          stats.mSysStat.radio.updateSignalStrengthChange(ss.getLevel());    	    	  
+    	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "signal strength: " + ss.getLevel());
     	      }
 //3G LTE : defined in TelephoneManager
@@ -425,7 +397,7 @@ public class PowerProfilingService extends Service{
                   String iface = intent.getStringExtra(PhoneConstants.DATA_IFACE_NAME_KEY);
                   PhoneConstants.DataState state = getMobileDataState(intent);
                   //TODO update to stats
-    	          if(Constants.DEBUG)
+    	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "data connection state: " + state + " iface: " + iface);
     	      }
 //wifi events
@@ -436,20 +408,21 @@ public class PowerProfilingService extends Service{
 //WIFI_STATE_UNKNOWN = 4;    	      
     	      else if(action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)){
     	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_STATE);
-    	    	  stats.mSysStat.updateWifiState(state);
-    	          if(Constants.DEBUG)
+    	    	  stats.mSysStat.wifi.updateWifiState(state);
+    	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Wifi state: " + state);
     	      }else if(action.equals(WifiManager.WIFI_AP_STATE_CHANGED_ACTION)){
     	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_AP_STATE);
-    	    	  stats.mSysStat.updateWifiState(state);    	    	  
-    	          if(Constants.DEBUG)
+    	    	  stats.mSysStat.wifi.updateWifiState(state);    	    	  
+    	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Wifi AP state: " + state);    	    	  
     	      }
     	      
     	      //TODO get wifi running state
     	   }
     };   
-    	    
+   
+    
     public class LocalBinder extends Binder {
     	public PowerProfilingService getService() {
           return PowerProfilingService.this;

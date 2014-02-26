@@ -8,6 +8,7 @@ import edu.wayne.cs.bugu.Constants;
 import android.util.Log;
 
 public class DevicePowerInfo {
+	public long time;
 	public double cpuPower = 0;
 	public double wifiPower = 0;
 	public double gpsPower = 0;
@@ -20,9 +21,13 @@ public class DevicePowerInfo {
 	public double idlePower = 0;
 	public double dspPower = 0;
     
+	public DevicePowerInfo(long t){
+		time = t;
+	}
+	
 	public void writePower(FileWriter io)throws IOException
 	{
-	        io.write("DEV: " + totalPower() + "," +
+	        io.write("DEV: " + time + "," + totalPower() + "," +
 	                cpuPower + "," +
 	                wifiPower + "," +
 	                gpsPower + "," +

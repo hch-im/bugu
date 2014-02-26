@@ -27,7 +27,6 @@ import java.sql.Timestamp;
 import edu.wayne.cs.bugu.db.RecordDAO;
 import edu.wayne.cs.bugu.db.SqliteHelper;
 import edu.wayne.cs.bugu.db.model.Record;
-import edu.wayne.cs.bugu.device.PowerProfile;
 import edu.wayne.cs.bugu.monitor.PowerProfilingService;
 import edu.wayne.cs.bugu.Constants;
 import edu.wayne.cs.bugu.R;
@@ -59,7 +58,6 @@ public class HomeActivity extends Activity implements OnClickListener{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.home);
         initViewListeners();
-        PowerProfile pp = PowerProfile.getPowerProfileOfDevice();
     	doBindService();            			
     }
         
@@ -147,10 +145,6 @@ public class HomeActivity extends Activity implements OnClickListener{
     
     private void stopMonitor()
     {
-        if(writer != null){
-            try{writer.close();}catch(Exception ex){}
-        }
-        
         if(lastRecord != null)
         {
             lastRecord.setState(1);
@@ -159,6 +153,10 @@ public class HomeActivity extends Activity implements OnClickListener{
         
         if(buguService != null)
         	buguService.stopMonitor();
+        
+        if(writer != null){
+            try{writer.close();}catch(Exception ex){}
+        }                
     }
     
     private void initWrite()
