@@ -30,7 +30,7 @@ public class CPU extends Component {
 	 * Init CPU stat. This method must be invoked after core number and cpu frequencies were parsed.
 	 */
 	public void init(){
-		parseCoreNumber();
+		coreNumber = this.readIntValueFromFile(MAX_CORE_ID) + 1;
 		parseAvailableFrequencies();
 		
 		mBaseCpuSpeedTimes = new long[cpuFrequencies.length];
@@ -46,14 +46,14 @@ public class CPU extends Component {
 	public void updateState() {
 		parseCPUSpeedTimes();
 		parseProcStat(); //invoke after parse cpu speed step times		
-		parseCurrentCPUFrequency();		
+		mCurCPUFrequency = this.readIntValueFromFile(SYS_CPU_FREQUENCY);	
 		//TODO C state power seems not useful
 //		for(int i = 0; i < coreNumber; i++){
 //			cores[i].updateState();
 //		}
 	}
 	
-	public long getSpeedStepTotalTime(){
+	private long getSpeedStepTotalTime(){
 		long total = 0;
 		for(long t:mRelCpuSpeedTimes)
 			total += t;
@@ -61,7 +61,7 @@ public class CPU extends Component {
 		return total;
 	}
 	
-	public boolean updateCPUTime(long[] data){
+	private boolean updateCPUTime(long[] data){
 		if(data == null || data.length < 7)
 			return false;
 //		Log.i("Bugu", "time " + data[0] + " " + data[1] + " " + data[2] + " " + data[3] + " " + data[4] + " " + data[5] + " " + data[6]);						
@@ -96,6 +96,7 @@ public class CPU extends Component {
 		return true;
 	}
 	
+	@Deprecated
 	public int indexOfFrequency(int frequency){
 		int index = -1;
 		for(int i = 0; i < cpuFrequencies.length; i++){
@@ -113,18 +114,7 @@ public class CPU extends Component {
 	 */
 	
 	private static final String MAX_CORE_ID = "/sys/devices/system/cpu/kernel_max";
-	/**
-	 * Get the number of cores.
-	 * @param cpu
-	 */
-	public void parseCoreNumber(){
-		String str = parser.readFile(MAX_CORE_ID, 8);
-		if(str == null)
-			return;
-		
-		int num = Integer.valueOf(str.split("\n")[0]) + 1;
-		coreNumber = num;
-	}	
+    private final String SYS_CPU_FREQUENCY = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq";
 	
 	private static final String FREQ_AVAILABLE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies";
 	/**
@@ -142,18 +132,6 @@ public class CPU extends Component {
 			freqs[i] = Integer.valueOf(frestrs[i]);
 		
 		cpuFrequencies = freqs;
-	}
-	
-    private final String SYS_CPU_FREQUENCY = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq";
-    /**
-     * Get current CPU frequency.
-     */
-	private void parseCurrentCPUFrequency(){
-		String str = parser.readFile(SYS_CPU_FREQUENCY, 8);
-		if(str == null)
-			return;
-		
-		mCurCPUFrequency = Integer.valueOf(str.split("\n")[0]);
 	}
 	
     private final String SYS_CPU_SPEED_STEPS = "/sys/devices/system/cpu/cpu0/cpufreq/stats/time_in_state";
@@ -237,6 +215,7 @@ public class CPU extends Component {
 
 	@Override
 	public void calculatePower(Stats st) {
+		//power model 1
 		double eng = 0;
 		for(int i = 0; i < cpuFrequencies.length; i++){
 			eng += (mRelCpuSpeedTimes[i] * st.powerProfile.getCPUSpeedStepPower(i));
@@ -244,5 +223,14 @@ public class CPU extends Component {
 		
 		double power = (eng * cpuUtilization /getSpeedStepTotalTime());
 		st.curDevicePower.cpuPower = power;
+		
+		//power model 2
+//		long totalTime = getSpeedStepTotalTime();
+//		double basePower = st.powerProfile.getCPUSpeedStepPower(0);
+//		double eng = totalTime * basePower;
+//		for(int i = 1; i < cpuFrequencies.length; i++)
+//			eng += (mRelCpuSpeedTimes[i] * (st.powerProfile.getCPUSpeedStepPower(i) - basePower));
+//		
+//		st.curDevicePower.cpuPower = eng / totalTime;
 	}	
 }

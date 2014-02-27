@@ -52,9 +52,11 @@ public class PowerProfilingService extends Service{
     private boolean state = false;
 	private int period=1000;
 	private final Stats stats = new Stats();
-
-    private Handler powerHandler = new Handler();
-    private Runnable   	powerPeriodicTask = new Runnable() {
+	private FileWriter writer = null;
+    private ArrayList<DevicePowerInfo> devPowerHistory = null;
+    
+    private final Handler powerHandler = new Handler();
+    private final Runnable powerPeriodicTask = new Runnable() {
         public void run() {
             if(!state)
             	return;
@@ -65,8 +67,6 @@ public class PowerProfilingService extends Service{
             powerHandler.postDelayed(powerPeriodicTask, period);
         }
     };     
-	private FileWriter writer = null;
-    private ArrayList<DevicePowerInfo> devPowerHistory = null;
     
     public boolean isMonitoring()
     {
@@ -175,11 +175,8 @@ public class PowerProfilingService extends Service{
 		
 		stats.updateTime();
 		stats.updateStates();		
-		stats.calculatePower();
-		
-		stats.dump(null);
-//		curDevicePower.dump();
-		
+		stats.calculatePower();		
+//		stats.dump(null);		
 		devPowerHistory.add(stats.curDevicePower);
 	}
 	
@@ -353,7 +350,7 @@ public class PowerProfilingService extends Service{
     	      if(action.equals(TelephonyManager.ACTION_PHONE_STATE_CHANGED)){
     	        //phone call on/off
     	    	  PhoneConstants.State state = getPhoneState(intent);
-    	    	  stats.mSysStat.radio.updatePhoneState(state);
+    	    	  stats.sys.radio.updatePhoneState(state);
     	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Phone state: " + state);
     	      }
@@ -377,13 +374,13 @@ public class PowerProfilingService extends Service{
     	    	  ServiceState ss = ServiceState.newFromBundle(data);
     	    	  int state = ss.getState();
     	          int simState = TelephonyManager.getDefault().getSimState();
-    	          stats.mSysStat.radio.updatePhoneServiceState(state, simState);
+    	          stats.sys.radio.updatePhoneServiceState(state, simState);
     	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Phone service state: " + state + " sim state:" + simState);
     	      }else if(action.equals(TelephonyIntents.ACTION_SIGNAL_STRENGTH_CHANGED)){
     	          Bundle data = intent.getExtras();
     	          SignalStrength ss = SignalStrength.newFromBundle(data);
-    	          stats.mSysStat.radio.updateSignalStrengthChange(ss.getLevel());    	    	  
+    	          stats.sys.radio.updateSignalStrengthChange(ss.getLevel());    	    	  
     	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "signal strength: " + ss.getLevel());
     	      }
@@ -408,12 +405,12 @@ public class PowerProfilingService extends Service{
 //WIFI_STATE_UNKNOWN = 4;    	      
     	      else if(action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)){
     	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_STATE);
-    	    	  stats.mSysStat.wifi.updateWifiState(state);
+    	    	  stats.sys.wifi.updateWifiState(state);
     	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Wifi state: " + state);
     	      }else if(action.equals(WifiManager.WIFI_AP_STATE_CHANGED_ACTION)){
     	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_AP_STATE);
-    	    	  stats.mSysStat.wifi.updateWifiState(state);    	    	  
+    	    	  stats.sys.wifi.updateWifiState(state);    	    	  
     	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Wifi AP state: " + state);    	    	  
     	      }

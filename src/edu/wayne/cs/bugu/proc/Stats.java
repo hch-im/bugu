@@ -38,25 +38,25 @@ import android.util.SparseArray;
 public class Stats {
 	public BasePowerProfile powerProfile = null;
 	public long mBaseTime = 0;
-	public System mSysStat = null;
-	public SparseArray<Pid> mPidStats;
-	public SparseArray<Uid> mUidStats;	
+	public System sys = null;
+	public SparseArray<Pid> pids;
+	public SparseArray<Uid> uids;	
 	public long mRelTime; //10 ms
     public SparseArray<AppPowerInfo> curAppPower = null;
     public DevicePowerInfo curDevicePower = null;    
     
 	public Stats(){
-		mSysStat = new System();
-		mPidStats= new SparseArray<Pid>();
-		mUidStats= new SparseArray<Uid>();
+		sys = new System();
+		pids= new SparseArray<Pid>();
+		uids= new SparseArray<Uid>();
 	}
 	
 	public void init(){
-		mSysStat.init();
+		sys.init();
 	}
 	
 	public void updateStates(){
-		mSysStat.updateState();
+		sys.updateState();
 		
 		Vector<Integer> pids = ProcFileParser.getAllPids();
 		Pid pidStat = null;
@@ -70,20 +70,20 @@ public class Stats {
 	}
 	
 	public Pid getPid(int pid){
-		Pid pStat = mPidStats.get(pid, null);
+		Pid pStat = pids.get(pid, null);
 		if(pStat == null){
 			pStat = new Pid(pid);
-			mPidStats.append(pid, pStat);//`append` is better than `put` here
+			pids.append(pid, pStat);//`append` is better than `put` here
 		}
 		
 		return pStat;
 	}
 	
 	public Uid getUid(int uid){
-		Uid uStat = mUidStats.get(uid, null);
+		Uid uStat = uids.get(uid, null);
 		if(uStat == null){
 			uStat = new Uid(uid);
-			mUidStats.append(uid, uStat);//`append` is better than `put` here
+			uids.append(uid, uStat);//`append` is better than `put` here
 		}
 		
 		return uStat;
@@ -96,19 +96,19 @@ public class Stats {
 		mRelTime = currentTime - mBaseTime;
 		mBaseTime = currentTime;
 		//post update
-		mSysStat.display.postUpdateScreenBrightness(mRelTime);
+		sys.display.postUpdateScreenBrightness(mRelTime);
 	}
 	
 	public void calculatePower(){
 		curAppPower = new SparseArray<AppPowerInfo>();
 		curDevicePower = new DevicePowerInfo(mBaseTime);	
-		mSysStat.calculatePower(this);
+		sys.calculatePower(this);
 		//TODO calculate pid and uid power
 		
 		AppPowerInfo api;
 		Pid ps;
-		for(int i = 0; i < mPidStats.size(); i++){
-			ps = mPidStats.valueAt(i);
+		for(int i = 0; i < pids.size(); i++){
+			ps = pids.valueAt(i);
 			api = curAppPower.get(ps.uid);
 			if(api == null){
 				api = new AppPowerInfo();
@@ -122,7 +122,7 @@ public class Stats {
 	
 	public void dump(FileWriter fw){
 		StringBuffer msg = new StringBuffer();
-		mSysStat.dump(msg);
+		sys.dump(msg);
 		
 		if(fw != null){
 			try{

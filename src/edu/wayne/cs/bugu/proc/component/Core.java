@@ -57,6 +57,28 @@ public class Core extends Component {
 		return true;
 	}
 	
+	@Override
+	public void dump(StringBuffer buf) {
+		if(Constants.DEBUG_CORE){
+			buf.append("core").append(coreId).append("-power ");
+			for(int i = 0; i < cStatesNumber; i++){
+				buf.append(relCStatesPower[i]).append(" ");
+			}
+			buf.append("\r\n");
+			
+			buf.append("core").append(coreId).append("-time ");
+			for(int i = 0; i < cStatesNumber; i++){
+				buf.append(relCStatesTime[i]).append(" ");
+			}			
+			buf.append("\r\n");
+		}
+	}
+
+	@Override
+	public void calculatePower(Stats st) {
+		// TODO Auto-generated method stub		
+	}
+	
 	/*
 	 * Functions to parse core related information.
 	 */
@@ -87,27 +109,5 @@ public class Core extends Component {
 			relCStatesTime[stateNum] = val - baseCStatesTime[stateNum];
 			baseCStatesTime[stateNum] = val;
 		}		
-	}
-
-	@Override
-	public void dump(StringBuffer buf) {
-		if(Constants.DEBUG_CORE){
-			buf.append("core").append(coreId).append("-power ");
-			for(int i = 0; i < cStatesNumber; i++){
-				buf.append(relCStatesPower[i]).append(" ");
-			}
-			buf.append("\r\n");
-			
-			buf.append("core").append(coreId).append("-time ");
-			for(int i = 0; i < cStatesNumber; i++){
-				buf.append(relCStatesTime[i]).append(" ");
-			}			
-			buf.append("\r\n");
-		}
-	}
-
-	@Override
-	public void calculatePower(Stats st) {
-		// TODO Auto-generated method stub		
 	}
 }

@@ -6,6 +6,7 @@ import java.text.NumberFormat;
 import edu.wayne.cs.bugu.R;
 import edu.wayne.cs.bugu.monitor.DevicePowerInfo;
 import edu.wayne.cs.bugu.monitor.PowerProfilingService;
+import edu.wayne.cs.bugu.proc.component.Battery;
 import edu.wayne.cs.bugu.proc.component.CPU;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,6 +17,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.view.Menu;
+import android.widget.EditText;
 import android.widget.TextView;
 
 public class DevicePowerActivity extends Activity {
@@ -38,6 +40,7 @@ public class DevicePowerActivity extends Activity {
 	private TextView wifi;
 	private TextView media;
 	private TextView display;
+	private EditText status;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +52,7 @@ public class DevicePowerActivity extends Activity {
 		wifi = (TextView)this.findViewById(R.id.wifiPowerTextView);
 		media = (TextView)this.findViewById(R.id.mediaPowerTextView);
 		display = (TextView)this.findViewById(R.id.displayPowerTextView);	
+		status = (EditText)this.findViewById(R.id.statusEditText);
 		
 		doBindService();
 	}
@@ -78,10 +82,11 @@ public class DevicePowerActivity extends Activity {
 		super.onResume();
 	}
 
-
 	private void updateDisplay(){
 		if(buguService != null && buguService.isMonitoring()){
-			CPU cpustat = buguService.getStats().mSysStat.cpu;
+			CPU cpustat = buguService.getStats().sys.cpu;
+			Battery bat = buguService.getStats().sys.battery;
+			
 			DevicePowerInfo dp = buguService.currentDevicePower();
 			
 			if(cpustat != null){
@@ -89,10 +94,16 @@ public class DevicePowerActivity extends Activity {
 			}
 			
 			if(dp != null){
-				cpu.setText(formatter.format(dp.cpuPower * 3.8) + " mw");
-				wifi.setText(formatter.format(dp.wifiPower * 3.8) + " mw");
-				radio.setText(formatter.format(dp.radioPower * 3.8) + " mw");			
-				display.setText(formatter.format(dp.screenPower * 3.8) + " mw");		
+				cpu.setText(formatter.format(dp.cpuPower * bat.voltage) + " mw");
+				wifi.setText(formatter.format(dp.wifiPower * bat.voltage) + " mw");
+				radio.setText(formatter.format(dp.radioPower * bat.voltage) + " mw");			
+				display.setText(formatter.format(dp.screenPower * bat.voltage) + " mw");		
+			}
+			
+			if(bat != null){
+				StringBuffer buf = new StringBuffer();
+				bat.dump(buf);
+				status.setText(buf.toString());
 			}
 		}
 	}

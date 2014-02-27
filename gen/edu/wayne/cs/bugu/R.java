@@ -46,21 +46,22 @@ public final class R {
         public static final int logo=0x7f020008;
     }
     public static final class id {
-        public static final int action_settings=0x7f0a0010;
+        public static final int action_settings=0x7f0a0011;
         public static final int cpuPowerTextView=0x7f0a0001;
         public static final int cpuTextView=0x7f0a0000;
         public static final int displayPowerTextView=0x7f0a0002;
         public static final int displayTextView=0x7f0a0003;
-        public static final int eventFigure=0x7f0a000b;
-        public static final int exitButton=0x7f0a000d;
-        public static final int horizontalScrollView1=0x7f0a000a;
+        public static final int eventFigure=0x7f0a000c;
+        public static final int exitButton=0x7f0a000e;
+        public static final int horizontalScrollView1=0x7f0a000b;
         public static final int mediaPowerTextView=0x7f0a0009;
         public static final int mediaTextView=0x7f0a0008;
-        public static final int powerFigure=0x7f0a000e;
+        public static final int powerFigure=0x7f0a000f;
         public static final int radioPowerTextView=0x7f0a0004;
         public static final int radioTextView=0x7f0a0005;
-        public static final int startButton=0x7f0a000c;
-        public static final int tableView=0x7f0a000f;
+        public static final int startButton=0x7f0a000d;
+        public static final int statusEditText=0x7f0a000a;
+        public static final int tableView=0x7f0a0010;
         public static final int wifiPowerTextView=0x7f0a0007;
         public static final int wifiTextView=0x7f0a0006;
     }

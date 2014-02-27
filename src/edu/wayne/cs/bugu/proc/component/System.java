@@ -8,18 +8,27 @@ public class System extends Component{
 	public Display display;
 	public Radio radio;
 	public Wifi wifi;
+	public Bluetooth bt;
+	public Battery battery;
 	
 	public System(){
 		cpu = new CPU();
 		display = new Display();
 		radio = new Radio();
 		wifi = new Wifi();
+		bt = new Bluetooth();
+		battery = new Battery();
 	}
 	
 	@Override
 	public void init() {
 		cpu.init();
 		display.init();
+		radio.init();
+		wifi.init();
+		bt.init();
+		battery.init();
+		
 	    pageSize = natLib.getPageSize();	    
 	}
 
@@ -27,6 +36,10 @@ public class System extends Component{
 	public void updateState() {
 		cpu.updateState();
 		display.updateState();
+		radio.updateState();
+		wifi.init();
+		bt.updateState();
+		battery.updateState();
 	}
 
 	@Override
@@ -35,12 +48,20 @@ public class System extends Component{
 		
 		cpu.dump(buf);
 		display.dump(buf);
+		radio.dump(buf);
+		wifi.dump(buf);
+		bt.dump(buf);
+		battery.dump(buf);
 	}
 
 	@Override
 	public void calculatePower(Stats st) {
 		cpu.calculatePower(st);
 		display.calculatePower(st);
+		radio.calculatePower(st);
+		wifi.calculatePower(st);
+		bt.calculatePower(st);
+		battery.calculatePower(st);
 	}
 
 }

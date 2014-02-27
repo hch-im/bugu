@@ -16,7 +16,7 @@ public class Display extends Component {
 
 	@Override
 	public void updateState() {
-		parseScreenBrightness();
+		mRelScreenBrightness = this.readIntValueFromFile(SYS_LEDS_BRIGHTNESS);
 	}
 	
 	public void postUpdateScreenBrightness(long relTime){
@@ -27,18 +27,6 @@ public class Display extends Component {
 			int bin = (mRelScreenBrightness - 1) / 5;
 			mScreenBrightnessBinTimes[bin] += relTime;
 		}
-	}
-	
-	/*
-	 * Functions for parse display related information.
-	 */
-    private final String SYS_LEDS_BRIGHTNESS = "/sys/class/leds/lcd-backlight/brightness";
-    public void parseScreenBrightness(){
-		String str = parser.readFile(SYS_LEDS_BRIGHTNESS, 8);
-		if(str == null)
-			return;
-		
-		mRelScreenBrightness = Integer.valueOf(str.split("\n")[0]);
 	}
 
 	@Override
@@ -55,10 +43,15 @@ public class Display extends Component {
 		}else{		
 			double screenOnPower = st.powerProfile.getScreenOnPower();
 			double screenFullPower = st.powerProfile.getScreenFullPower();
-			int bin = (st.mSysStat.display.mRelScreenBrightness - 1) / 5;
+			int bin = (st.sys.display.mRelScreenBrightness - 1) / 5;
 			st.curDevicePower.screenPower = (screenFullPower - screenOnPower) * bin
 	                			/ (Display.SCREEN_BRIGHTNESS_BINS - 1)
 	                			+ screenOnPower;		
 		}
 	}		
+	
+	/*
+	 * Functions for parse display related information.
+	 */
+    private final String SYS_LEDS_BRIGHTNESS = "/sys/class/leds/lcd-backlight/brightness";
 }
