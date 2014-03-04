@@ -53,4 +53,16 @@ public class DefaultPowerProfile extends BasePowerProfile{
 		return 0;
 	}
 
+	@Override
+	public double getScreenBinPower(int bin) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public double getCPUIdlePower() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }

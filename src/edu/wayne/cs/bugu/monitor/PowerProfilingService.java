@@ -176,7 +176,8 @@ public class PowerProfilingService extends Service{
 		stats.updateTime();
 		stats.updateStates();		
 		stats.calculatePower();		
-//		stats.dump(null);		
+//		stats.dump(null);	
+		stats.dump(writer);
 		devPowerHistory.add(stats.curDevicePower);
 	}
 	

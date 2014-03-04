@@ -5,18 +5,18 @@ import edu.wayne.cs.bugu.proc.Stats;
 public class Display extends Component {
 	public long mBaseScreenOffTime = 0;	
 	public long mRelScreenOffTime;
-	public static final int SCREEN_BRIGHTNESS_BINS = 51; //bin size is 5
+	public static final int BRIGHTNESS_BIN_NUMBER = 51; //bin size is 5
 	private long[] mScreenBrightnessBinTimes;
 	public int mRelScreenBrightness;//0 means screen is off, 1-255 means screen is on
 	
 	@Override
 	public void init() {
-		mScreenBrightnessBinTimes = new long[SCREEN_BRIGHTNESS_BINS];
+		mScreenBrightnessBinTimes = new long[BRIGHTNESS_BIN_NUMBER];
 	}
 
 	@Override
 	public void updateState() {
-		mRelScreenBrightness = this.readIntValueFromFile(SYS_LEDS_BRIGHTNESS);
+		mRelScreenBrightness = readIntValueFromFile(SYS_LEDS_BRIGHTNESS);
 	}
 	
 	public void postUpdateScreenBrightness(long relTime){
@@ -41,12 +41,10 @@ public class Display extends Component {
 			st.curDevicePower.screenPower = 0;
 			return;
 		}else{		
-			double screenOnPower = st.powerProfile.getScreenOnPower();
-			double screenFullPower = st.powerProfile.getScreenFullPower();
-			int bin = (st.sys.display.mRelScreenBrightness - 1) / 5;
-			st.curDevicePower.screenPower = (screenFullPower - screenOnPower) * bin
-	                			/ (Display.SCREEN_BRIGHTNESS_BINS - 1)
-	                			+ screenOnPower;		
+			//P1 + (P255-P1)/254*(brightness - 1)
+			st.curDevicePower.screenPower = st.powerProfile.getScreenOnPower() +
+					(st.powerProfile.getScreenFullPower() - st.powerProfile.getScreenOnPower()) 
+					/ 254 * (mRelScreenBrightness - 1);
 		}
 	}		
 	

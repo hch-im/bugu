@@ -84,20 +84,14 @@ public class DevicePowerActivity extends Activity {
 
 	private void updateDisplay(){
 		if(buguService != null && buguService.isMonitoring()){
-			CPU cpustat = buguService.getStats().sys.cpu;
-			Battery bat = buguService.getStats().sys.battery;
-			
+			Battery bat = buguService.getStats().sys.battery;		
 			DevicePowerInfo dp = buguService.currentDevicePower();
-			
-			if(cpustat != null){
-				media.setText(formatter.format(cpustat.cpuUtilization) + "%");			
-			}
-			
+				
 			if(dp != null){
-				cpu.setText(formatter.format(dp.cpuPower * bat.voltage) + " mw");
+				cpu.setText(formatter.format(dp.cpuPower) + " mw");
 				wifi.setText(formatter.format(dp.wifiPower * bat.voltage) + " mw");
 				radio.setText(formatter.format(dp.radioPower * bat.voltage) + " mw");			
-				display.setText(formatter.format(dp.screenPower * bat.voltage) + " mw");		
+				display.setText(formatter.format(dp.screenPower) + " mw");	
 			}
 			
 			if(bat != null){

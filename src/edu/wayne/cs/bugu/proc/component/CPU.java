@@ -1,5 +1,6 @@
 package edu.wayne.cs.bugu.proc.component;
 
+import android.util.Log;
 import edu.wayne.cs.bugu.Constants;
 import edu.wayne.cs.bugu.proc.Stats;
 
@@ -9,19 +10,12 @@ public class CPU extends Component {
 	
 	public long mBaseUserTime = 0;
 	public long mBaseSysTime = 0;
-	public long mBaseIOWaitTime = 0;
-	public long mBaseIdleTime = 0;
 	public long[] mBaseCpuSpeedTimes = null;
 	//relative time in 10 milli sconds
-	//system cpu usage = (user + sys + irq + softirq)/(user + sys + io + irq + softirq + idle)		
-	public long mRelUserTime;
-	public long mRelSysTime;
 	public long mRelCPUTime;
-	public long mRelIOWaitTime;
-	public long mRelIdleTime;
 	
 	public long[] mRelCpuSpeedTimes = null;		
-	public int mCurCPUFrequency;
+//	public int mCurCPUFrequency;
 	public double cpuUtilization;
 	
 	public Core[] cores;
@@ -46,7 +40,7 @@ public class CPU extends Component {
 	public void updateState() {
 		parseCPUSpeedTimes();
 		parseProcStat(); //invoke after parse cpu speed step times		
-		mCurCPUFrequency = this.readIntValueFromFile(SYS_CPU_FREQUENCY);	
+//		mCurCPUFrequency = this.readIntValueFromFile(SYS_CPU_FREQUENCY);	
 		//TODO C state power seems not useful
 //		for(int i = 0; i < coreNumber; i++){
 //			cores[i].updateState();
@@ -64,35 +58,17 @@ public class CPU extends Component {
 	private boolean updateCPUTime(long[] data){
 		if(data == null || data.length < 7)
 			return false;
-//		Log.i("Bugu", "time " + data[0] + " " + data[1] + " " + data[2] + " " + data[3] + " " + data[4] + " " + data[5] + " " + data[6]);						
+
 		long usr = data[0] + data[1];
 		long sys = data[2] + data[5] + data[6];
 		
-		long deltaIOW = data[4] - mBaseIOWaitTime;
-		//this happen when io on going
-		if(deltaIOW < 0){
-			deltaIOW = mRelIOWaitTime;//use last io wait time
-		}
-		
-		long deltaIdle = data[3] - mBaseIdleTime;
-		if(Math.abs(deltaIdle) > getSpeedStepTotalTime() * 10){
-			deltaIdle = mRelIdleTime;
-		}
-//		Log.i("Bugu", "time " + mRelTime + " - " + usr + " " + sys + " " + total + " " + delta);			
-		// total user time = user time + nice time
-		mRelUserTime = usr - mBaseUserTime;
-		mRelSysTime = sys - mBaseSysTime;
-		mRelCPUTime = mRelUserTime + mRelSysTime + deltaIOW + deltaIdle;
-		mRelIOWaitTime = deltaIOW;			
-		mRelIdleTime = deltaIdle;
-		
-		//user time
+		mRelCPUTime = (usr - mBaseUserTime) + (sys - mBaseSysTime);
 		mBaseUserTime = usr;
-		mBaseSysTime = sys;
-		mBaseIOWaitTime = data[4];
-		mBaseIdleTime = data[3];
-				
-		cpuUtilization = 100.0 * (mRelUserTime + mRelSysTime) / mRelCPUTime;
+		mBaseSysTime = sys;				
+		
+		double activeTime = 1.0 * mRelCPUTime / coreNumber;
+		cpuUtilization = 100.0 * activeTime / Math.max(getSpeedStepTotalTime(), activeTime);
+
 		return true;
 	}
 	
@@ -147,14 +123,11 @@ public class CPU extends Component {
 		int index = 0;
 		long time;
 		
-//		StringBuffer buf = new StringBuffer("speedstep");
-		
 		for(String token : str.split("\n")){
 			if(str.trim().length() == 0) continue;
 			try{
 				vals = token.split(" ");
 				time = Long.valueOf(vals[1]);
-//				buf.append(" ").append(time);
 				mRelCpuSpeedTimes[index] = time - mBaseCpuSpeedTimes[index];
 				mBaseCpuSpeedTimes[index] = time;
 			}catch (NumberFormatException nfe){
@@ -163,8 +136,6 @@ public class CPU extends Component {
 				index++;
 			}
 		}
-		
-//		Log.i("Bugu", buf.toString());		
 	}	
 	
 	private static final String PROC_STAT = "/proc/stat";
@@ -207,7 +178,7 @@ public class CPU extends Component {
 	@Override
 	public void dump(StringBuffer buf) {
 		if(Constants.DEBUG_CPU)
-			buf.append("utilization " + cpuUtilization + " " + (mRelUserTime + mRelSysTime) + " " + mRelCPUTime + " " + mCurCPUFrequency/1000);
+			buf.append("utilization " + cpuUtilization + "\r\n");
 
 		for(int i = 0; i < coreNumber; i++)
 			cores[i].dump(buf);
@@ -216,14 +187,19 @@ public class CPU extends Component {
 	@Override
 	public void calculatePower(Stats st) {
 		//power model 1
-		double eng = 0;
+		double avgPower = 0;
+		double ratio = 0;
+		double totalCpuSpeedStepTime = getSpeedStepTotalTime();
 		for(int i = 0; i < cpuFrequencies.length; i++){
-			eng += (mRelCpuSpeedTimes[i] * st.powerProfile.getCPUSpeedStepPower(i));
+			ratio = mRelCpuSpeedTimes[i] /totalCpuSpeedStepTime;
+			avgPower += (ratio * st.powerProfile.getCPUSpeedStepPower(i));
 		}
 		
-		double power = (eng * cpuUtilization /getSpeedStepTotalTime());
-		st.curDevicePower.cpuPower = power;
-		
+		double activeTime = mRelCPUTime * 1.0 / coreNumber;
+		double interval = Math.max(activeTime, totalCpuSpeedStepTime);
+		double power = activeTime * avgPower + (interval - activeTime) * st.powerProfile.getCPUIdlePower();
+		st.curDevicePower.cpuPower = power / st.mRelTime;
+//		Log.i("Bugu", "power " + power + " " + activeTime + " " + interval + " " + avgPower);
 		//power model 2
 //		long totalTime = getSpeedStepTotalTime();
 //		double basePower = st.powerProfile.getCPUSpeedStepPower(0);
