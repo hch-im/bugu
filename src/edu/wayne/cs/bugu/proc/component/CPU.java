@@ -186,27 +186,15 @@ public class CPU extends Component {
 
 	@Override
 	public void calculatePower(Stats st) {
-		//power model 1
-		double avgPower = 0;
+		double staticAvgPower = 0; //the cpu uncore part
 		double ratio = 0;
 		double totalCpuSpeedStepTime = getSpeedStepTotalTime();
 		for(int i = 0; i < cpuFrequencies.length; i++){
 			ratio = mRelCpuSpeedTimes[i] /totalCpuSpeedStepTime;
-			avgPower += (ratio * st.powerProfile.getCPUSpeedStepPower(i));
+			staticAvgPower += (ratio * st.powerProfile.getCPUSpeedStepPower(i));
 		}
-		
-		double activeTime = mRelCPUTime * 1.0 / coreNumber;
-		double interval = Math.max(activeTime, totalCpuSpeedStepTime);
-		double power = activeTime * avgPower + (interval - activeTime) * st.powerProfile.getCPUIdlePower();
-		st.curDevicePower.cpuPower = power / st.mRelTime;
-//		Log.i("Bugu", "power " + power + " " + activeTime + " " + interval + " " + avgPower);
-		//power model 2
-//		long totalTime = getSpeedStepTotalTime();
-//		double basePower = st.powerProfile.getCPUSpeedStepPower(0);
-//		double eng = totalTime * basePower;
-//		for(int i = 1; i < cpuFrequencies.length; i++)
-//			eng += (mRelCpuSpeedTimes[i] * (st.powerProfile.getCPUSpeedStepPower(i) - basePower));
-//		
-//		st.curDevicePower.cpuPower = eng / totalTime;
+		//the cpu core part
+		double dynamicPower = st.powerProfile.getCPUPowerOfUtilization(cpuUtilization);
+		st.curDevicePower.cpuPower = staticAvgPower + dynamicPower;
 	}	
 }

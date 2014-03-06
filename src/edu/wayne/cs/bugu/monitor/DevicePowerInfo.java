@@ -20,6 +20,7 @@ public class DevicePowerInfo {
 	public double radioPower = 0;
 	public double idlePower = 0;
 	public double dspPower = 0;
+    public double batteryPower = 0;
     
 	public DevicePowerInfo(long t){
 		time = t;
@@ -39,6 +40,7 @@ public class DevicePowerInfo {
 	                radioPower + "," +
 	                idlePower + "," +
 	                dspPower +
+	                batteryPower + "," +
 	                "\r\n"
 	                  );
 	}

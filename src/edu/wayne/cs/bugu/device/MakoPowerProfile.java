@@ -15,29 +15,31 @@ public class MakoPowerProfile extends BasePowerProfile {
     public static final double IO_READ_POWER_PER_BYTE = 0.092; // mJ/kb
     public static final double IO_WRITE_POWER_PER_BYTE = 0.564; //mJ/kb  
     public static final double AVERAGE_VOLTAGE = 3.800;
+
+    private static final double[] CPU_ACTIVE_POWER_RANGE = {150.97, 4313.01};// based on CPU Governor, the range is different
+    private static final double[] CPU_STATIC_POWER= { 229.85, 241.60, 248.17, 244.32, 250.28, 255.67, 
+    												243.46, 257.70, 279.94, 273.65, 269.6, 271.65};
+    private double cpuStaticParam = 1.0;
+    private double cpuDynamicParam = 1.0;
+    
+    private double screenMinParam = 1.8; //calibrate the range of screen base power
+    private double screenMaxParam = 1.17;
     
 	protected MakoPowerProfile(Context context) {
 		super(context);
 		
 		int stepNum = profile.getNumSpeedSteps();
 		speedStepPowerRatios = new double[stepNum];
-		double min = profile.getAveragePower(PowerProfile.POWER_CPU_ACTIVE, 0);
-		double max = profile.getAveragePower(PowerProfile.POWER_CPU_ACTIVE, stepNum - 1);
-		//for different platform modify alpha and beta to calibrate the power model
-		double alpha = 0.2;
-		double beta = 1.08;
-		
 		for(int i = 0; i < stepNum; i++){
-			double stepPower = profile.getAveragePower(PowerProfile.POWER_CPU_ACTIVE, i);
-//			speedStepPowerRatios[i] = (min/10 + (stepPower - min)/(max - min) * alpha) * beta;
-			speedStepPowerRatios[i] = stepPower * AVERAGE_VOLTAGE;
+			speedStepPowerRatios[i] = CPU_STATIC_POWER[i] * cpuStaticParam;
 		}
-		
-		Arrays.sort(speedStepPowerRatios);
+
 		cpuIdlePower = profile.getAveragePower(PowerProfile.POWER_CPU_IDLE) * AVERAGE_VOLTAGE;
+		cpuMinPower = CPU_ACTIVE_POWER_RANGE[0] * cpuDynamicParam;
+		cpuMaxPower = CPU_ACTIVE_POWER_RANGE[1] * cpuDynamicParam;
 		//screen
-		screenOnPower = profile.getAveragePower(PowerProfile.POWER_SCREEN_ON) * AVERAGE_VOLTAGE;
-		screenFullPower = profile.getAveragePower(PowerProfile.POWER_SCREEN_FULL);
+		screenOnPower = profile.getAveragePower(PowerProfile.POWER_SCREEN_ON) * AVERAGE_VOLTAGE * screenMinParam;
+		screenFullPower = profile.getAveragePower(PowerProfile.POWER_SCREEN_FULL) * AVERAGE_VOLTAGE * screenMaxParam;
 		screenBinPower = new double[Display.BRIGHTNESS_BIN_NUMBER];
 		for(int i = 0; i < Display.BRIGHTNESS_BIN_NUMBER; i++){
 			screenBinPower[i] = screenOnPower + (screenFullPower - screenOnPower)/Display.BRIGHTNESS_BIN_NUMBER * (i + 1);
@@ -93,6 +95,11 @@ public class MakoPowerProfile extends BasePowerProfile {
 	@Override
 	public double getCPUIdlePower() {
 		return cpuIdlePower;
+	}
+
+	@Override
+	public double getCPUPowerOfUtilization(double utilize) {
+		return cpuMaxPower - (cpuMaxPower - cpuMinPower)/100.0 * utilize;
 	}
 
 }

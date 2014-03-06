@@ -9,6 +9,8 @@ public abstract class BasePowerProfile {
 	protected PowerProfile profile;
 	protected double[] speedStepPowerRatios;
 	protected double cpuIdlePower;
+	protected double cpuMinPower;
+	protected double cpuMaxPower;	
     //screen
 	protected double[] screenBinPower;
 	protected double screenOnPower;
@@ -33,11 +35,12 @@ public abstract class BasePowerProfile {
 	
 	public abstract double getCPUSpeedStepPower(int step);
 	public abstract double getCPUIdlePower();
+	public abstract double getCPUPowerOfUtilization(double utilize);
 	public abstract int getNumberOfSpeedStep();
 	public abstract double getScreenOnPower();
 	public abstract double getScreenFullPower();
 	public abstract double getScreenBinPower(int bin);	
 	public abstract double getRadioActivePower();
 	public abstract double getRadioBinPower(int bin);
-	public abstract double getRadioScanningPower();
+	public abstract double getRadioScanningPower();	
 }

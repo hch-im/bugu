@@ -32,6 +32,7 @@ public class Battery extends Component {
 	@Override
 	public void calculatePower(Stats st) {
 		power = voltage * current;
+		st.curDevicePower.batteryPower = power;
 	}
 
 	@Override
