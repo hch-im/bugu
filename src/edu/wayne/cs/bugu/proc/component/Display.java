@@ -15,7 +15,7 @@ public class Display extends Component {
 	}
 
 	@Override
-	public void updateState() {
+	public void updateState(long relTime) {
 		mRelScreenBrightness = readIntValueFromFile(SYS_LEDS_BRIGHTNESS);
 	}
 	

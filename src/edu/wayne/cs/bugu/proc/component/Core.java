@@ -34,7 +34,7 @@ public class Core extends Component {
 	}
 	
 	@Override
-	public void updateState() {
+	public void updateState(long relTime) {
 		for(int i = 0; i < cStatesNumber; i++)
 			parseCStateOfCore(i);
 	}

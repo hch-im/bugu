@@ -1,13 +1,19 @@
 package edu.wayne.cs.bugu.device;
 
+import java.util.HashMap;
+
 import com.android.internal.os.PowerProfile;
+
+import edu.wayne.cs.bugu.proc.component.Radio.FourGState;
+import edu.wayne.cs.bugu.proc.component.Radio.ThreeGState;
 
 import android.content.Context;
 
 public class DefaultPowerProfile extends BasePowerProfile{
-
+	
 	protected DefaultPowerProfile(Context context) {
 		super(context);
+		
 		// TODO Auto-generated constructor stub
 //		int stepNum = profile.getNumSpeedSteps();
 //		speedStepPowerRatios = new double[stepNum];
@@ -86,4 +92,15 @@ public class DefaultPowerProfile extends BasePowerProfile{
 		return 0;
 	}
 
+	@Override
+	public double getPowerOf3GState(ThreeGState state) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public double getPowerOf4GState(FourGState state) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 }

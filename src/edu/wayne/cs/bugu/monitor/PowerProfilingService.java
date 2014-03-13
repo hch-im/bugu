@@ -136,6 +136,7 @@ public class PowerProfilingService extends Service{
 		//wifi
 		filter.addAction(WifiManager.WIFI_AP_STATE_CHANGED_ACTION);
 		filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+		//network interface
 		
 		registerReceiver(receiver, filter);
 
@@ -180,165 +181,7 @@ public class PowerProfilingService extends Service{
 		stats.dump(writer);
 		devPowerHistory.add(stats.curDevicePower);
 	}
-	
-//    private void estimateAppPower(long uSecTime) {
-//        SensorManager sensorManager = (SensorManager)mainActivity.getSystemService(Context.SENSOR_SERVICE);
-//        double wifiPowerPerKB = getWifiAverageDataCost(uSecTime); 
-////        log("wifiPowerPerKB: " + wifiPowerPerKB + "\r\n");
-//        
-//        SparseArray<? extends Uid> uidStats = batteryStats.getUidStats();
-//        final int NU = uidStats.size();
-//        for (int iu = 0; iu < NU; iu++) {
-//            Uid u = uidStats.valueAt(iu);
-//            AppPowerInfo appInfo = curAppPower.get(u.getUid());
-//            if(appInfo == null)
-//            	appInfo = new AppPowerInfo();
-//            appInfo.id = u.getUid();
-//            
-//            powerModel.setAppPowerInfo(appInfo);
-//            powerModel.appWakelockPower(u.getWakelockStats(), uSecTime);
-//            //did not distinguish 3G and wifi
-//            powerModel.appNetworkPower(u.getTcpBytesReceived(statsType), 
-//            						   u.getTcpBytesSent(statsType), 
-//            						   u.getWifiRunningTime(uSecTime, statsType),
-//            						   wifiPowerPerKB);
-//            powerModel.appSensorPower(u.getSensorStats(), uSecTime, sensorManager);
-//            powerModel.appIOPower(u.getPidStats());
-//            powerModel.appMediaPower(u.getAudioTurnedOnTime(uSecTime, statsType), 
-//                                     u.getVideoTurnedOnTime(uSecTime, statsType));
-//            //total power
-//            if (u.getUid() == Process.WIFI_UID) {
-//                double appPower = appInfo.totalPower();
-//                curDevicePower.wifiPower += appPower;
-//            } else if (u.getUid() == Process.BLUETOOTH_GID) {
-//                double appPower = appInfo.totalPower();
-//                curDevicePower.buletoothPower += appPower;
-//            }
-//        }
-//            
-//    }
-    
-//    private void estimateDevicePower(long uSecTime) {
-//        long phoneOnTime = batteryStats.getPhoneOnTime(uSecTime, statsType);
-//        powerModel.phonePower(phoneOnTime);
-//        powerModel.radioPower(batteryStats, uSecTime);
-//        
-//        long wifiOnTime = batteryStats.getWifiOnTime(uSecTime, statsType);
-//        long wifiRunTime = batteryStats.getGlobalWifiRunningTime(uSecTime, statsType);
-//        wifiRunTime -= getAppWifiRunTime();        
-//        if (wifiRunTime < 0) wifiRunTime = 0;        
-//        powerModel.wifiPower(wifiOnTime, wifiRunTime);
-//        
-//        long idleTime = (uSecTime - batteryStats.getScreenOnTime(uSecTime, statsType));
-//        powerModel.idlePower(idleTime);
-//        
-//        long btOnTime = batteryStats.getBluetoothOnTime(uSecTime, statsType);
-//        int btPingCount = batteryStats.getBluetoothPingCount();
-//        powerModel.bluetoothPower(btOnTime, btPingCount);
-//    }
-    
-//    private void loadStatsData() {
-//    	if(batteryInfo == null)
-//    	    batteryInfo = IBatteryStats.Stub.asInterface(ServiceManager.getService("batteryinfo"));
-//	    if(batteryInfo == null)
-//	    {
-//	    	Log.w("pTopA: ", "load : failed to create batteryInfo service.");
-//	    }
-//        try {
-//            byte[] data = batteryInfo.getStatistics();
-//            Parcel parcel = Parcel.obtain();
-//            parcel.unmarshall(data, 0, data.length);
-//            parcel.setDataPosition(0);
-//            batteryStats = BatteryStatsImpl.CREATOR.createFromParcel(parcel);
-//            batteryStats.distributeWorkLocked(statsType);
-//        } catch (RemoteException e) {}
-//    }
-    
-//    private double getMobileAverageDataCost(long uSecTime) {
-//        final double threeGPower = powerProfile.getAveragePower(PowerProfile.POWER_RADIO_ACTIVE);
-//        final long mobileData = batteryStats.getMobileTcpBytesReceived(statsType) +
-//        		batteryStats.getMobileTcpBytesSent(statsType);
-//        final long radioDataUptimeMs = batteryStats.getRadioDataUptime() / 1000;
-//
-//        double powerPerKB = (threeGPower * radioDataUptimeMs * PowerModel.voltage / 1000) / (mobileData / 1024); // mJ/kb
-//        return powerPerKB;
-//    }
-
-//    private double getWifiAverageDataCost(long uSecTime) {        
-//        if(wifiAvgPower == 0){        
-//            //load from database
-//            Config c1 = cdao.get("wifiTotalData");
-//            if(c1 != null) wifiTotalData = Long.valueOf(c1.getValue());
-//            Config c2 = cdao.get("wifiAvgPower");
-//            if(c2 != null) wifiAvgPower = Double.valueOf(c2.getValue());
-//            
-//            final double wifiActivePower = powerProfile.getAveragePower(PowerProfile.POWER_WIFI_ACTIVE);
-//            //data received and sent from last unplug
-//            final long mobileData = batteryStats.getMobileTcpBytesReceived(statsType) +
-//                    batteryStats.getMobileTcpBytesSent(statsType);
-//            final long wifiData = batteryStats.getTotalTcpBytesReceived(statsType) +
-//                    batteryStats.getTotalTcpBytesSent(statsType) - mobileData;
-//            
-//            long wifiRunTime = batteryStats.getGlobalWifiRunningTime(uSecTime, statsType) / 1000; //ms
-////            log("DEV--- mobileData:" + mobileData + " wifiData: " + wifiData + " wifiRunTime: " + wifiRunTime);        
-//            double powerPerKB;
-//            if(wifiData == 0){
-//                return 0;
-//            }
-//            else
-//            {
-//                powerPerKB = (wifiActivePower * wifiRunTime / 1000) / (wifiData / 1024); //mJ/kb
-//                //save data
-//                if(wifiData > wifiTotalData)
-//                {
-//                    if(c1 == null)
-//                    {
-//                        c1 = new Config();
-//                        c1.setName("wifiTotalData");
-//                        c1.setValue(wifiData+"");
-//                        cdao.insert(c1);
-//                    }
-//                    else
-//                    {
-//                        c1.setValue(wifiData+"");
-//                        cdao.update(c1);
-//                    }
-//                    
-//                    if(c2 == null)
-//                    {
-//                        c2 = new Config();
-//                        c2.setName("wifiAvgPower");
-//                        c2.setValue(powerPerKB+"");
-//                        cdao.insert(c2);
-//                    }
-//                    else
-//                    {
-//                        c2.setValue(powerPerKB+"");
-//                        cdao.update(c2);
-//                    }                    
-//                }
-//                
-//                return powerPerKB;
-//            }
-//            
-//        }        
-//        else
-//        {
-//            return wifiAvgPower;
-//        }
-//    }
-    
-//    private long getAppWifiRunTime()
-//    {
-//    	long appWifiRunTime = 0;
-//    	for(int i = 0 ; i < curAppPower.size(); i++){
-//    		AppPowerInfo pInfo = curAppPower.valueAt(i);
-//    		appWifiRunTime += pInfo.wifiRunTime;    		
-//    	}
-//    	
-//    	return appWifiRunTime;
-//    }
-   
+       
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
     	   @Override
     	   public void onReceive(Context context, Intent intent) {
@@ -352,7 +195,7 @@ public class PowerProfilingService extends Service{
     	        //phone call on/off
     	    	  PhoneConstants.State state = getPhoneState(intent);
     	    	  stats.sys.radio.updatePhoneState(state);
-    	          if(Constants.DEBUG_EVENTS)
+    	          if(Constants.DEBUG_RADIO)
     	        	  Log.i(Constants.APP_TAG, "Phone state: " + state);
     	      }
 //radio service state
@@ -376,13 +219,19 @@ public class PowerProfilingService extends Service{
     	    	  int state = ss.getState();
     	          int simState = TelephonyManager.getDefault().getSimState();
     	          stats.sys.radio.updatePhoneServiceState(state, simState);
-    	          if(Constants.DEBUG_EVENTS)
+    	          if(Constants.DEBUG_RADIO)
     	        	  Log.i(Constants.APP_TAG, "Phone service state: " + state + " sim state:" + simState);
-    	      }else if(action.equals(TelephonyIntents.ACTION_SIGNAL_STRENGTH_CHANGED)){
+    	      }
+// SIGNAL_STRENGTH_GREAT = 4;
+// SIGNAL_STRENGTH_GOOD = 3;    	      
+// SIGNAL_STRENGTH_MODERATE = 2;
+// SIGNAL_STRENGTH_POOR = 1;    	          	      
+// SIGNAL_STRENGTH_NONE_OR_UNKNOWN = 0;   in scanning state
+    	      else if(action.equals(TelephonyIntents.ACTION_SIGNAL_STRENGTH_CHANGED)){
     	          Bundle data = intent.getExtras();
     	          SignalStrength ss = SignalStrength.newFromBundle(data);
     	          stats.sys.radio.updateSignalStrengthChange(ss.getLevel());    	    	  
-    	          if(Constants.DEBUG_EVENTS)
+    	          if(Constants.DEBUG_RADIO)
     	        	  Log.i(Constants.APP_TAG, "signal strength: " + ss.getLevel());
     	      }
 //3G LTE : defined in TelephoneManager
@@ -394,8 +243,19 @@ public class PowerProfilingService extends Service{
     	      else if(action.equals(TelephonyIntents.ACTION_ANY_DATA_CONNECTION_STATE_CHANGED)){
                   String iface = intent.getStringExtra(PhoneConstants.DATA_IFACE_NAME_KEY);
                   PhoneConstants.DataState state = getMobileDataState(intent);
-                  //TODO update to stats
-    	          if(Constants.DEBUG_EVENTS)
+                  //determine if this is 3g or 4g network
+                  if(state == PhoneConstants.DataState.CONNECTED 
+	          				&& stats.sys.radio.mNetworkClass == TelephonyManager.NETWORK_CLASS_UNKNOWN){
+                	  TelephonyManager mTelephonyManager = (TelephonyManager)
+	          		                                context.getSystemService(Context.TELEPHONY_SERVICE);
+                	  int type = mTelephonyManager.getNetworkType();
+                	  int clas = TelephonyManager.getNetworkClass(type);
+                	  String opt = mTelephonyManager.getNetworkOperatorName();
+                	  stats.sys.radio.updateNetworkInfo(type, clas, opt);
+                  }
+                  stats.sys.radio.updateDataConnectionState(state, iface);
+
+    	          if(Constants.DEBUG_RADIO)
     	        	  Log.i(Constants.APP_TAG, "data connection state: " + state + " iface: " + iface);
     	      }
 //wifi events

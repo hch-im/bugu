@@ -37,7 +37,7 @@ public class CPU extends Component {
 	}
 	
 	@Override
-	public void updateState() {
+	public void updateState(long relTime) {
 		parseCPUSpeedTimes();
 		parseProcStat(); //invoke after parse cpu speed step times		
 //		mCurCPUFrequency = this.readIntValueFromFile(SYS_CPU_FREQUENCY);	

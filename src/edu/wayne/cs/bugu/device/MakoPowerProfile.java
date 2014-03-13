@@ -1,10 +1,13 @@
 package edu.wayne.cs.bugu.device;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 import com.android.internal.os.PowerProfile;
 
 import edu.wayne.cs.bugu.proc.component.Display;
+import edu.wayne.cs.bugu.proc.component.Radio.FourGState;
+import edu.wayne.cs.bugu.proc.component.Radio.ThreeGState;
 
 import android.content.Context;
 /**
@@ -17,8 +20,8 @@ public class MakoPowerProfile extends BasePowerProfile {
     public static final double AVERAGE_VOLTAGE = 3.800;
 
     private static final double[] CPU_ACTIVE_POWER_RANGE = {150.97, 4313.01};// based on CPU Governor, the range is different
-    private static final double[] CPU_STATIC_POWER= { 229.85, 241.60, 248.17, 244.32, 250.28, 255.67, 
-    												243.46, 257.70, 279.94, 273.65, 269.6, 271.65};
+    private static final double[] CPU_STATIC_POWER= { 271.65, 269.6, 273.65, 279.94, 257.70, 243.46, 
+    													255.67, 250.28, 244.32, 248.17, 241.60, 229.85};
     private double cpuStaticParam = 1.0;
     private double cpuDynamicParam = 1.0;
     
@@ -33,7 +36,8 @@ public class MakoPowerProfile extends BasePowerProfile {
 		for(int i = 0; i < stepNum; i++){
 			speedStepPowerRatios[i] = CPU_STATIC_POWER[i] * cpuStaticParam;
 		}
-
+		Arrays.sort(speedStepPowerRatios);	
+		
 		cpuIdlePower = profile.getAveragePower(PowerProfile.POWER_CPU_IDLE) * AVERAGE_VOLTAGE;
 		cpuMinPower = CPU_ACTIVE_POWER_RANGE[0] * cpuDynamicParam;
 		cpuMaxPower = CPU_ACTIVE_POWER_RANGE[1] * cpuDynamicParam;
@@ -71,19 +75,19 @@ public class MakoPowerProfile extends BasePowerProfile {
 
 	@Override
 	public double getRadioActivePower() {
-		double power = profile.getAveragePower(PowerProfile.POWER_RADIO_ACTIVE);
+		double power = profile.getAveragePower(PowerProfile.POWER_RADIO_ACTIVE) * AVERAGE_VOLTAGE;
 		return power;
 	}
 
 	@Override
 	public double getRadioBinPower(int bin) {
-		double power = profile.getAveragePower(PowerProfile.POWER_RADIO_ON, bin);		
+		double power = profile.getAveragePower(PowerProfile.POWER_RADIO_ON, bin) * AVERAGE_VOLTAGE;		
 		return power;
 	}
 
 	@Override
 	public double getRadioScanningPower() {
-		double power = profile.getAveragePower(PowerProfile.POWER_RADIO_SCANNING);		
+		double power = profile.getAveragePower(PowerProfile.POWER_RADIO_SCANNING) * AVERAGE_VOLTAGE;		
 		return power;
 	}
 
@@ -99,9 +103,28 @@ public class MakoPowerProfile extends BasePowerProfile {
 
 	@Override
 	public double getCPUPowerOfUtilization(double utilize) {
-		return cpuMaxPower - (cpuMaxPower - cpuMinPower)/100.0 * utilize;
+		return (cpuMaxPower - cpuMinPower) / 100.0 * utilize;
 	}
 
+	@Override
+	public double getPowerOf3GState(ThreeGState state) {
+		switch(state){
+			case DCH:
+				return 800;
+			case FACH:
+				return 460;
+			case IDLE:
+			case UNKNOWN:
+			default:
+				return 0;
+		}
+	}
+
+	@Override
+	public double getPowerOf4GState(FourGState state) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 }
 
 /*

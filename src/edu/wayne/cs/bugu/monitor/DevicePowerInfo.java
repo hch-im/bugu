@@ -39,7 +39,7 @@ public class DevicePowerInfo {
 	                phonePower + "," +
 	                radioPower + "," +
 	                idlePower + "," +
-	                dspPower +
+	                dspPower + "," +
 	                batteryPower + "," +
 	                "\r\n"
 	                  );

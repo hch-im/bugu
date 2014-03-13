@@ -2,6 +2,9 @@ package edu.wayne.cs.bugu.device;
 
 import com.android.internal.os.PowerProfile;
 
+import edu.wayne.cs.bugu.proc.component.Radio.FourGState;
+import edu.wayne.cs.bugu.proc.component.Radio.ThreeGState;
+
 import android.content.Context;
 import android.os.Build;
 
@@ -15,7 +18,7 @@ public abstract class BasePowerProfile {
 	protected double[] screenBinPower;
 	protected double screenOnPower;
 	protected double screenFullPower;
-
+	
 	protected BasePowerProfile(Context context){
 		profile = new PowerProfile(context);
 	}
@@ -43,4 +46,6 @@ public abstract class BasePowerProfile {
 	public abstract double getRadioActivePower();
 	public abstract double getRadioBinPower(int bin);
 	public abstract double getRadioScanningPower();	
+	public abstract double getPowerOf3GState(ThreeGState state);
+	public abstract double getPowerOf4GState(FourGState state);	
 }

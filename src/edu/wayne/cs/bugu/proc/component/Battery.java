@@ -22,7 +22,7 @@ public class Battery extends Component {
 	}
 
 	@Override
-	public void updateState() {
+	public void updateState(long relTime) {
 		voltage = readIntValueFromFile(SYS_BATTERY_VOLTAGE)/1e6;//uV->V
 		current = readIntValueFromFile(SYS_BATTERY_CURRENT)/1e3;//uA -> mA
 		capacity = readIntValueFromFile(SYS_BATTERY_CAPACITY);//0-100

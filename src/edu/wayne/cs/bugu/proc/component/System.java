@@ -33,13 +33,14 @@ public class System extends Component{
 	}
 
 	@Override
-	public void updateState() {
-		cpu.updateState();
-		display.updateState();
-		radio.updateState();
-		wifi.updateState();
-		bt.updateState();
-		battery.updateState();
+
+	public void updateState(long relTime) {
+		cpu.updateState(relTime);
+		display.updateState(relTime);
+		radio.updateState(relTime);
+		wifi.updateState(relTime);
+		bt.updateState(relTime);
+		battery.updateState(relTime);
 	}
 
 	@Override
