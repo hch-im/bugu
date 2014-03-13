@@ -29,7 +29,7 @@ public abstract class Component {
 	 * -ion of the component. Invoked in each time
 	 * interval.
 	 */
-	public abstract void updateState();
+	public abstract void updateState(long relTime);
 
 	/**
 	 * calculate the power of the component.

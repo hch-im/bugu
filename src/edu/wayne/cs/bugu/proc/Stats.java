@@ -56,7 +56,7 @@ public class Stats {
 	}
 	
 	public void updateStates(){
-		sys.updateState();
+		sys.updateState(mRelTime);
 		
 		Vector<Integer> pids = ProcFileParser.getAllPids();
 		Pid pidStat = null;

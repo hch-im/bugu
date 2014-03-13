@@ -17,7 +17,7 @@ public class Uid extends Component {
 	}
 
 	@Override
-	public void updateState() {
+	public void updateState(long relTime) {
 		// TODO Auto-generated method stub
 		
 	}
