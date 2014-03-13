@@ -37,7 +37,7 @@ public class System extends Component{
 		cpu.updateState();
 		display.updateState();
 		radio.updateState();
-		wifi.init();
+		wifi.updateState();
 		bt.updateState();
 		battery.updateState();
 	}
