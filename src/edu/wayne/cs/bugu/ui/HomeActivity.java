@@ -45,7 +45,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 
 public class HomeActivity extends Activity implements OnClickListener{
-    private int period=1000;
+    private int period=250;
 	private PowerProfilingService buguService = null;
     private FileWriter writer = null;
     private RecordDAO rdao = new RecordDAO();    

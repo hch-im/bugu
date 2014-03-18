@@ -12,8 +12,7 @@ public abstract class BasePowerProfile {
 	protected PowerProfile profile;
 	protected double[] speedStepPowerRatios;
 	protected double cpuIdlePower;
-	protected double cpuMinPower;
-	protected double cpuMaxPower;	
+	protected double cpuFullActivePower;	
     //screen
 	protected double[] screenBinPower;
 	protected double screenOnPower;

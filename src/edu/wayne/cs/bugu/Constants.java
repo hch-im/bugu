@@ -7,6 +7,6 @@ public class Constants {
 	public static final boolean DEBUG_CPU = false;
 	public static final boolean DEBUG_CORE = false;
 	public static final boolean DEBUG_BATTERY = false;	
-	public static final boolean DEBUG_WIFI = true;
-	public static final boolean DEBUG_RADIO = false;		
+	public static final boolean DEBUG_WIFI = false;
+	public static final boolean DEBUG_RADIO = true;		
 }

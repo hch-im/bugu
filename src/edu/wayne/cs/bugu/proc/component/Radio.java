@@ -14,7 +14,7 @@ import edu.wayne.cs.bugu.Constants;
 import edu.wayne.cs.bugu.proc.Stats;
 
 public class Radio extends Component {
-	public boolean mPhoneOn = false;
+	public PhoneConstants.State mPhoneState = PhoneConstants.State.IDLE;
 	public int mSignalStrengthBin = -1; //-1: power off, 0: scanning 1-4: real signal strength
 	public int mPhoneServiceState = -1;
 	public int mPhoneSimState = -1;
@@ -29,6 +29,7 @@ public class Radio extends Component {
 	public long mBasePacketsTransmitted;
 	public long mRelPacketsReceived;
 	public long mRelPacketsTransmitted;
+	public double throughput;
 	public int mNetworkClass = TelephonyManager.NETWORK_CLASS_UNKNOWN; //3g or 4g
 	public int mNetworkType = TelephonyManager.NETWORK_TYPE_UNKNOWN;
 	public String mNetworkOperator = null;
@@ -44,7 +45,7 @@ public class Radio extends Component {
 	@Override
 	public void init() {
 		tailTimeMap = new HashMap<String, int[]>();
-		int[] attTail = {500, 1200, 0};//in ticks
+		int[] attTail = {1000, 100, 0};//in ticks, ATT HSPA+
 		tailTimeMap.put("AT&T", attTail);
 		int[] tmTail = {500, 100, 100};
 		tailTimeMap.put("T-Mobile", tmTail);		
@@ -60,7 +61,7 @@ public class Radio extends Component {
 		double radioPower = 0;
 		
 		//when makeing a phone call
-		if(mPhoneOn)
+		if(mPhoneState == PhoneConstants.State.OFFHOOK || mPhoneState == PhoneConstants.State.RINGING)
 			radioPower += st.powerProfile.getRadioActivePower();
 		
 		//when scanning mSignalStrengthBin = 0
@@ -86,18 +87,19 @@ public class Radio extends Component {
 	@Override
 	public void dump(StringBuffer buf) {
 		if(Constants.DEBUG_RADIO){
-			buf.append("\r\n phone state: ").append(mPhoneOn)
+			buf.append("\r\nphone state: ").append(mPhoneState.toString())
 			.append(" signal strength bin: ").append(mSignalStrengthBin)
 			.append(" service state: ").append(mPhoneServiceState)
 			.append(" sim state: ").append(mPhoneSimState);
 			
-			buf.append("\r\n iface: ").append(iface)
+			buf.append("\r\niface: ").append(iface)
 			.append(" recv: ").append(mRelBytesReceived)
 			.append(" trans: ").append(mRelBytesTransmitted)
 			.append(" recvpackets: ").append(mRelPacketsReceived)
-			.append(" transpackets: ").append(mRelPacketsTransmitted);
+			.append(" transpackets: ").append(mRelPacketsTransmitted)
+			.append(" throughput: ").append(throughput);
 			
-			buf.append("\r\n network type : " ).append(this.mNetworkType)
+			buf.append("\r\nnetwork type : " ).append(this.mNetworkType)
 			.append(" class: ").append(this.mNetworkClass)
 			.append(" operator: ").append(this.mNetworkOperator);
 		}
@@ -110,7 +112,7 @@ public class Radio extends Component {
 		
 		if(state == ServiceState.STATE_POWER_OFF) {
             mSignalStrengthBin = -1;
-            mPhoneOn = false;
+            mPhoneState = PhoneConstants.State.IDLE;
 		}			
 		else if (state == ServiceState.STATE_OUT_OF_SERVICE) {
 //            scanning = true;
@@ -123,11 +125,7 @@ public class Radio extends Component {
 	}
 	
 	public void updatePhoneState(PhoneConstants.State state){
-		if(state == PhoneConstants.State.IDLE){
-			mPhoneOn = false;
-		}else{
-			mPhoneOn = true;
-		}
+		mPhoneState = state;
 	}
 
 	public void updateDataConnectionState(PhoneConstants.DataState dataState, String ifs){
@@ -158,22 +156,20 @@ public class Radio extends Component {
 		mBaseBytesReceived = recv;
 		mBaseBytesTransmitted = trans;
 		boolean dataActive = (mRelBytesReceived + mRelBytesTransmitted) > 0;
-		
+		throughput = (mRelBytesReceived + mRelBytesTransmitted) * 100.0 / mRelTime; // bytes/s
+				
 		long recvPackets = readLongValueFromFile("/sys/class/net/" + iface + "/statistics/rx_packets");
 		long transPackets = readLongValueFromFile("/sys/class/net/" + iface + "/statistics/tx_packets");
 		mRelPacketsReceived = recvPackets - mBasePacketsReceived;
 		mRelPacketsTransmitted = transPackets - mBasePacketsTransmitted;
 		mBasePacketsReceived = recvPackets;
 		mBasePacketsTransmitted = transPackets;
-		
+
 		if(mNetworkClass == TelephonyManager.NETWORK_CLASS_3_G){
 			// 3g state machine.
 			
 			switch(mThreeGState){
 				case UNKNOWN: //start from UNKNOWN
-					if(dataActive)
-						mThreeGState = ThreeGState.DCH;   // dch or fach unknown ?
-					else
 						mThreeGState = ThreeGState.IDLE; 
 					break;
 				case IDLE:

@@ -50,10 +50,11 @@ import android.util.Log;
 public class PowerProfilingService extends Service{
 	private final IBinder mBinder = new LocalBinder();
     private boolean state = false;
-	private int period=1000;
+	private int period = 250;
 	private final Stats stats = new Stats();
 	private FileWriter writer = null;
     private ArrayList<DevicePowerInfo> devPowerHistory = null;
+    private ArrayList<String> logs = null;
     
     private final Handler powerHandler = new Handler();
     private final Runnable powerPeriodicTask = new Runnable() {
@@ -98,6 +99,7 @@ public class PowerProfilingService extends Service{
 
 		stats.updateTime();
 		devPowerHistory = new ArrayList<DevicePowerInfo>();        
+		logs = new ArrayList<String>();
 		powerHandler.postDelayed(powerPeriodicTask, period);   
         state = true;
     }
@@ -108,12 +110,15 @@ public class PowerProfilingService extends Service{
     public void stopMonitor()
     {        
         state = false;
-        for(DevicePowerInfo dpi : devPowerHistory){
-        	try{
-        		dpi.writePower(writer);
-        	}catch(Exception ex){ex.printStackTrace();}
-        }
-        
+    	try{
+	        for(String str : logs){
+        		writer.write(str);
+	        }
+	        writer.write("\r\n");
+	        for(DevicePowerInfo dpi : devPowerHistory){
+	        		dpi.writePower(writer);
+	        }
+    	}catch(Exception ex){ex.printStackTrace();}
         devPowerHistory = null;
     }
     
@@ -178,7 +183,7 @@ public class PowerProfilingService extends Service{
 		stats.updateStates();		
 		stats.calculatePower();		
 //		stats.dump(null);	
-		stats.dump(writer);
+		stats.dump(logs);
 		devPowerHistory.add(stats.curDevicePower);
 	}
        

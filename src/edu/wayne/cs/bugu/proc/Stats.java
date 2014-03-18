@@ -21,6 +21,7 @@ package edu.wayne.cs.bugu.proc;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Vector;
 
 import edu.wayne.cs.bugu.Constants;
@@ -58,15 +59,15 @@ public class Stats {
 	public void updateStates(){
 		sys.updateState(mRelTime);
 		
-		Vector<Integer> pids = ProcFileParser.getAllPids();
-		Pid pidStat = null;
-		for(Integer pid : pids){
-			pidStat = getPid(pid);
-			if(pidStat.uid == -1){//new process
-				pidStat.parseProcPidStatus();
-			}
-			pidStat.parseProcPidStat();
-		}
+//		Vector<Integer> pids = ProcFileParser.getAllPids();
+//		Pid pidStat = null;
+//		for(Integer pid : pids){
+//			pidStat = getPid(pid);
+//			if(pidStat.uid == -1){//new process
+//				pidStat.parseProcPidStatus();
+//			}
+//			pidStat.parseProcPidStat();
+//		}
 	}
 	
 	public Pid getPid(int pid){
@@ -120,14 +121,12 @@ public class Stats {
 		}		
 	}
 	
-	public void dump(FileWriter fw){
+	public void dump(ArrayList<String> logs){
 		StringBuffer msg = new StringBuffer();
 		sys.dump(msg);
 		
-		if(fw != null){
-			try{
-				fw.write(msg.toString());
-			}catch(IOException ioe){}
+		if(logs != null){
+			logs.add(msg.toString());
 		}else
 			Log.i(Constants.APP_TAG, msg.toString());
 	}
