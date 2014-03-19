@@ -55,6 +55,8 @@ public class CPU extends Component {
 		return total;
 	}
 	
+	private long[] lastData;
+	//user, nice, sys, idle, iowait, irq, softirq
 	private boolean updateCPUTime(long[] data){
 		if(data == null || data.length < 7)
 			return false;
@@ -68,7 +70,8 @@ public class CPU extends Component {
 		
 		double activeTime = 1.0 * mRelCPUTime / coreNumber;
 		cpuUtilization = 100.0 * activeTime / Math.max(getSpeedStepTotalTime(), activeTime);
-
+		lastData = data;
+		
 		return true;
 	}
 	
@@ -144,13 +147,6 @@ public class CPU extends Component {
 	 * @return
 	 */
 	private void parseProcStat(){
-		//When using tickless kernel, idle/iowait accounting are not doing.
-		//So the value might get outdated. 		
-//		if(Process.readProcFile(PROC_STAT, PROC_STAT_FORMAT, null, mProcStatLong, null)){
-//			if(cpuStat.updateCPUTime(mProcStatLong))
-//				return true;
-//		}
-		
 		String str = parser.readFile(PROC_STAT, 512);
 		if(str == null)
 			return;		
@@ -177,9 +173,13 @@ public class CPU extends Component {
 
 	@Override
 	public void dump(StringBuffer buf) {
-		if(Constants.DEBUG_CPU)
-			buf.append("utilization " + cpuUtilization + "\r\n");
-
+		if(Constants.DEBUG_CPU){
+			buf.append("\r\nutilization: " + cpuUtilization);
+			buf.append("\r\ncputime: ");
+			for(long t:lastData)
+				buf.append(t + " ");
+		}
+		
 		for(int i = 0; i < coreNumber; i++)
 			cores[i].dump(buf);
 	}
