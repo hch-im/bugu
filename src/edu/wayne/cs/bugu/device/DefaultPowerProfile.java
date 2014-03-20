@@ -103,4 +103,34 @@ public class DefaultPowerProfile extends BasePowerProfile{
 		// TODO Auto-generated method stub
 		return 0;
 	}
+
+	@Override
+	public double[] getWiFiUploadInfo() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public double[] getWiFiUploadParam() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public double[] getWiFiDownloadInfo() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public double[] getWiFiDownloadParam() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public double[] getWiFiScanPower() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

@@ -29,6 +29,12 @@ public class MakoPowerProfile extends BasePowerProfile {
     
     private double[] THREE_G_POWER =  {800, 300, 0}; //the power of DCH, PACH and IDLE state in each signal strength
     
+    private double[] wifiUploadInfo = {10, 117.41, 30}; //the threshold， high base power, low base power
+    private double[] wifiUploadParam = {2.1405, 5.3172}; //the high power parameter, the low power paramter
+    private double[] wifiDownloadInfo = {14, 73.283 , 43.802};//the threshold， high base power, low base power
+    private double[] wifiDownloadParam = {0.1004, 2.3564}; //the high power parameter, the low power paramter
+    private double[] wifiScanPower = {100, 150}; //wifiOn, wifiOff
+    
 	protected MakoPowerProfile(Context context) {
 		super(context);
 		
@@ -125,6 +131,36 @@ public class MakoPowerProfile extends BasePowerProfile {
 	public double getPowerOf4GState(FourGState state) {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public double[] getWiFiUploadInfo() {
+		// TODO Auto-generated method stub
+		return wifiUploadInfo;
+	}
+
+	@Override
+	public double[] getWiFiUploadParam() {
+		// TODO Auto-generated method stub
+		return wifiUploadParam;
+	}
+
+	@Override
+	public double[] getWiFiDownloadInfo() {
+		// TODO Auto-generated method stub
+		return wifiDownloadInfo;
+	}
+
+	@Override
+	public double[] getWiFiDownloadParam() {
+		// TODO Auto-generated method stub
+		return wifiDownloadParam;
+	}
+
+	@Override
+	public double[] getWiFiScanPower() {
+		// TODO Auto-generated method stub
+		return wifiScanPower;
 	}
 }
 

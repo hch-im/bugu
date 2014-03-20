@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2012, Mobile and Internet Systems Laboratory.
+  *   Copyright (C) 2012, Mobile and Internet Systems Laboratory.
  *   All rights reserved.
  *
  *   Authors: Hui Chen (hchen229@gmail.com)
@@ -35,6 +35,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Bundle;
@@ -271,14 +272,27 @@ public class PowerProfilingService extends Service{
 //WIFI_STATE_UNKNOWN = 4;    	      
     	      else if(action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)){
     	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_STATE);
-    	    	  stats.sys.wifi.updateWifiState(state);
+    	    	  stats.sys.wifi.updateWifiState(state,-1);
     	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Wifi state: " + state);
     	      }else if(action.equals(WifiManager.WIFI_AP_STATE_CHANGED_ACTION)){
     	    	  int state = (Integer) intent.getExtra(WifiManager.EXTRA_WIFI_AP_STATE);
-    	    	  stats.sys.wifi.updateWifiState(state);    	    	  
+    	    	  stats.sys.wifi.updateWifiState(state,-1);    	    	  
     	          if(Constants.DEBUG_EVENTS)
     	        	  Log.i(Constants.APP_TAG, "Wifi AP state: " + state);    	    	  
+    	      }else if(action.equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)){
+    	    	  int state = 3; //Constant: scan results available
+    	    	  stats.sys.wifi.updateWifiState(-1,state);    	    	  
+    	          if(Constants.DEBUG_EVENTS)
+    	        	  Log.i(Constants.APP_TAG, "Wifi Scan results available " + state);    	    	  
+    	      }else if(action.equals(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION)){
+    	    	  SupplicantState supState = intent.getParcelableExtra(WifiManager.EXTRA_NEW_STATE);
+    	    	  if (supState.equals(SupplicantState.SCANNING)){
+    	    		  int state = 2;//Constant: Scan start
+    	    		  stats.sys.wifi.updateWifiState(-1,state); 
+    	    	  }
+    	          if(Constants.DEBUG_EVENTS)
+    	        	  Log.i(Constants.APP_TAG, "Wifi Supplicant state " + supState);    	    	  
     	      }
     	      
     	      //TODO get wifi running state

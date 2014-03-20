@@ -46,5 +46,12 @@ public abstract class BasePowerProfile {
 	public abstract double getRadioBinPower(int bin);
 	public abstract double getRadioScanningPower();	
 	public abstract double getPowerOf3GState(ThreeGState state);
-	public abstract double getPowerOf4GState(FourGState state);	
+	public abstract double getPowerOf4GState(FourGState state);
+
+	public abstract double[] getWiFiUploadInfo();
+	public abstract double[] getWiFiUploadParam();
+	public abstract double[] getWiFiDownloadInfo();
+	public abstract double[] getWiFiDownloadParam();
+
+	public abstract double[] getWiFiScanPower();
 }

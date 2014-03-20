@@ -7,8 +7,12 @@ import edu.wayne.cs.bugu.proc.Stats;
 
 public class Wifi extends Component {
 	public boolean mWifiOn = false;
+	public boolean mWifiScan = false;
 	public long rxp,txp, rxb,txb;
 	private long preRxp, preTxp, preRxb, preTxb;
+	
+	//TODO: mWifiScan most time is false, it seems scan time is too short to record Scan start.
+	// the mWifiScan state is not standard changed, defined some constant in PowerProfilingService.
 
 	@Override
 	public void init() {
@@ -38,15 +42,40 @@ public class Wifi extends Component {
 	@Override
 	public void calculatePower(Stats st) {
 		// TODO Auto-generated method stub
-		if(!mWifiOn)
-			return;
+		if(mWifiScan){
+			if(mWifiOn)
+				st.curDevicePower.wifiPower = st.powerProfile.getWiFiScanPower()[0];
+			else
+				st.curDevicePower.wifiPower = st.powerProfile.getWiFiScanPower()[1];
+
+		}else{
+			if(!mWifiOn)
+				return;
+		
+			
 		// coefficient values from devscope
-		long deltaPkg = txp+rxp-preTxp-preRxp;
-		if(deltaPkg<20)
-			st.curDevicePower.wifiPower= deltaPkg*2+110;
+		long deltaTbytes = txb-preTxb;
+		long deltaRbytes = rxb-preRxb;
+		long deltaTPkg = txp-preTxp;
+		long deltaRPkg = rxp-preRxp;
+		if(deltaTbytes>=deltaRbytes){
+			if(deltaTPkg >= st.powerProfile.getWiFiUploadInfo()[0]){
+				st.curDevicePower.wifiPower= deltaTPkg*st.powerProfile.getWiFiUploadParam()[0]+st.powerProfile.getWiFiUploadInfo()[1];
+			}
+			else
+				st.curDevicePower.wifiPower= deltaTPkg*st.powerProfile.getWiFiUploadParam()[1]+st.powerProfile.getWiFiUploadInfo()[2];
+			
+		}
+			
 		else{
-			st.curDevicePower.wifiPower= deltaPkg*0.7+140.7;
-			}//st.powerProfile.
+			if(deltaRPkg >= st.powerProfile.getWiFiDownloadInfo()[0]){
+				st.curDevicePower.wifiPower= deltaRPkg*st.powerProfile.getWiFiDownloadParam()[0]+st.powerProfile.getWiFiDownloadInfo()[1];
+			}
+			else
+				st.curDevicePower.wifiPower= deltaRPkg*st.powerProfile.getWiFiDownloadParam()[1]+st.powerProfile.getWiFiDownloadInfo()[2];
+			
+			}
+		}//st.powerProfile.
 		
 	}
 
@@ -56,19 +85,25 @@ public class Wifi extends Component {
 		long time = java.lang.System.currentTimeMillis();
 		if(Constants.DEBUG_WIFI){
 			buf.append("rxp " + String.valueOf(rxp) +" txp " + String.valueOf(txp)+" rxb " + String.valueOf(rxb) +" txb " + String.valueOf(txb)+ "\r\n");
-			//buf.append("delta " + String.valueOf(txp+rxp-preTxp-preRxp) + "\r\n");
+			buf.append("WiFi on " + mWifiOn + " WiFiScan " + mWifiScan + "\r\n");
 		
 		}
 		
 	}
 
-	public void updateWifiState(int wifiState){
+	public void updateWifiState(int wifiState, int scanState){
         if (wifiState == WifiManager.WIFI_STATE_ENABLED ||
         		wifiState == WifiManager.WIFI_AP_STATE_ENABLED) {
         	mWifiOn = true;
         }else if(wifiState == WifiManager.WIFI_STATE_DISABLED || 
         		wifiState == WifiManager.WIFI_AP_STATE_DISABLED){
         	mWifiOn = false;
+        }
+        
+        if (scanState == 2) {
+        	mWifiScan = true;
+        }else if(wifiState == 3){
+        	mWifiScan = false;
         }
 	}
 	
