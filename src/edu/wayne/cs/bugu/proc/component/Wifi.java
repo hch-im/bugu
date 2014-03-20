@@ -7,14 +7,16 @@ import edu.wayne.cs.bugu.proc.Stats;
 
 public class Wifi extends Component {
 	public boolean mWifiOn = false;
-	public int rxp,txp;
-	private int preRxp, preTxp;
+	public long rxp,txp, rxb,txb;
+	private long preRxp, preTxp, preRxb, preTxb;
 
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 		rxp = readIntValueFromFile(SYS_WIFI_RXPACKETS);
 		txp = readIntValueFromFile(SYS_WIFI_TXPACKETS);
+		rxb = readIntValueFromFile(SYS_WIFI_RXBYTES);
+		txb = readIntValueFromFile(SYS_WIFI_TXBYTES);
 		
 	}
 
@@ -23,8 +25,12 @@ public class Wifi extends Component {
 		// TODO Auto-generated method stub
 		preRxp = rxp;
 		preTxp = txp;
+		preRxb = rxb;
+		preTxb = txb;
 		rxp = readIntValueFromFile(SYS_WIFI_RXPACKETS);
 		txp = readIntValueFromFile(SYS_WIFI_TXPACKETS);
+		rxb = readIntValueFromFile(SYS_WIFI_RXBYTES);
+		txb = readIntValueFromFile(SYS_WIFI_TXBYTES);
 		//Log.d("package data", txp+","+"rxp");
 		
 	}
@@ -35,7 +41,7 @@ public class Wifi extends Component {
 		if(!mWifiOn)
 			return;
 		// coefficient values from devscope
-		int deltaPkg = txp+rxp-preTxp-preRxp;
+		long deltaPkg = txp+rxp-preTxp-preRxp;
 		if(deltaPkg<20)
 			st.curDevicePower.wifiPower= deltaPkg*2+110;
 		else{
@@ -49,9 +55,8 @@ public class Wifi extends Component {
 		// TODO Auto-generated method stub
 		long time = java.lang.System.currentTimeMillis();
 		if(Constants.DEBUG_WIFI){
-			buf.append("txp " + String.valueOf(txp) + "\r\n");
-			buf.append("rxp " + String.valueOf(rxp) + "\r\n");
-			buf.append("delta " + String.valueOf(txp+rxp-preTxp-preRxp) + "\r\n");
+			buf.append("rxp " + String.valueOf(rxp) +" txp " + String.valueOf(txp)+" rxb " + String.valueOf(rxb) +" txb " + String.valueOf(txb)+ "\r\n");
+			//buf.append("delta " + String.valueOf(txp+rxp-preTxp-preRxp) + "\r\n");
 		
 		}
 		
@@ -72,4 +77,6 @@ public class Wifi extends Component {
 	 */
     private final String SYS_WIFI_TXPACKETS = "/sys/class/net/wlan0/statistics/tx_packets";
     private final String SYS_WIFI_RXPACKETS = "/sys/class/net/wlan0/statistics/rx_packets";
+    private final String SYS_WIFI_TXBYTES = "/sys/class/net/wlan0/statistics/tx_bytes";
+    private final String SYS_WIFI_RXBYTES = "/sys/class/net/wlan0/statistics/rx_bytes";
 }

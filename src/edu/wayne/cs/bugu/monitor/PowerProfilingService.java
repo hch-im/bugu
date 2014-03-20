@@ -50,7 +50,7 @@ import android.util.Log;
 public class PowerProfilingService extends Service{
 	private final IBinder mBinder = new LocalBinder();
     private boolean state = false;
-	private int period = 250;
+	private int period = 500;
 	private final Stats stats = new Stats();
 	private FileWriter writer = null;
     private ArrayList<DevicePowerInfo> devPowerHistory = null;

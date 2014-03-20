@@ -70,7 +70,7 @@ public class CPU extends Component {
 		
 		double activeTime = 1.0 * mRelCPUTime / coreNumber;
 		cpuUtilization = 100.0 * activeTime / Math.max(getSpeedStepTotalTime(), activeTime);
-		lastData = data;
+		lastData = java.util.Arrays.copyOf(data, data.length);
 		
 		return true;
 	}
